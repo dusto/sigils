@@ -1,29 +1,44 @@
 package handler
 
 import (
-	"sync"
+	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
 )
 
-type Endpoint interface {
-	Register(api huma.API)
-}
+func (h *Handler) Register() {
 
-var regendpointMU sync.RWMutex
-var registeredendpoints = make(map[string]Endpoint)
-
-func RegisterEndpoint(path string, endpoint Endpoint) {
-	regendpointMU.Lock()
-	defer regendpointMU.Unlock()
-	if _, ok := registeredendpoints[path]; ok {
-		panic("Endpoints: RegisterEndpoint called twice for path " + path)
-	}
-	registeredendpoints[path] = endpoint
-}
-
-func RegisterApi(api huma.API) {
-	for _, v := range registeredendpoints {
-		v.Register(api)
-	}
+	// config endpoint
+	huma.Register(h.api, huma.Operation{
+		OperationID: "list-configs",
+		Method:      http.MethodGet,
+		Path:        "/clusters",
+		Summary:     "List Machine Clusters",
+	}, h.ClusterGetAnyOf)
+	huma.Register(h.api, huma.Operation{
+		OperationID: "get-configs",
+		Method:      http.MethodGet,
+		Path:        "/cluster/{id}",
+		Summary:     "Get Machine Cluster",
+	}, h.ClusterGetOneOf)
+	huma.Register(h.api, huma.Operation{
+		OperationID:   "post-configs",
+		Method:        http.MethodPost,
+		Path:          "/cluster/add",
+		Summary:       "Add new Machine Cluster",
+		DefaultStatus: http.StatusCreated,
+	}, h.ClusterPost)
+	huma.Register(h.api, huma.Operation{
+		OperationID: "delete-configs",
+		Method:      http.MethodDelete,
+		Path:        "/cluster/{id}",
+		Summary:     "Delete Machine Cluster",
+	}, h.ClusterDelete)
+	huma.Register(h.api, huma.Operation{
+		OperationID:   "gen-configs",
+		Method:        http.MethodPost,
+		Path:          "/cluster/gen",
+		Summary:       "Generate new Machine Cluster",
+		DefaultStatus: http.StatusCreated,
+	}, h.ClusterGen)
 }

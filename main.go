@@ -12,10 +12,12 @@ import (
 	"github.com/danielgtaylor/huma/v2/adapters/humaecho"
 	"github.com/danielgtaylor/huma/v2/humacli"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/dusto/sigils/pkg/handler"
+	"github.com/dusto/sigils/pkg/repository"
 )
 
 //go:embed schema.sql
@@ -38,12 +40,36 @@ func main() {
 		panic(err)
 	}
 
+	queries := repository.New(db)
+
 	cli := humacli.New(func(hooks humacli.Hooks, opts *Options) {
 		router := echo.New()
+		router.Use(middleware.Logger())
 
-		api := humaecho.New(router, huma.DefaultConfig("Test API", "0.0.1"))
+		api := humaecho.New(router, huma.DefaultConfig("Sigils", "0.0.1"))
 
-		handler.RegisterApi(api)
+		handle := handler.New(api, queries)
+		handle.Register()
+
+		// One off define style for docs
+		router.GET("/docs", func(ctx echo.Context) error {
+			return ctx.HTML(http.StatusOK, string(`<!doctype html>
+        <html>
+          <head>
+            <title>API Reference</title>
+            <meta charset="utf-8" />
+            <meta
+              name="viewport"
+              content="width=device-width, initial-scale=1" />
+          </head>
+          <body>
+            <script
+              id="api-reference"
+              data-url="/openapi.json"></script>
+            <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+          </body>
+        </html>`))
+		})
 
 		srv := &http.Server{
 			Addr:    fmt.Sprintf("%s:%d", "localhost", opts.Port),
