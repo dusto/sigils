@@ -24,25 +24,26 @@ import (
 var backendDDL string
 
 type Options struct {
-	Port int `help:"Port to listen on " default:"8888"`
+	StorePath string `help:"Path to database file" default:"sigils.db"`
+	Port      int    `help:"Port to listen on " default:"8888"`
 }
 
 func main() {
 
-	ctx := context.Background()
-
-	db, err := sql.Open("sqlite3", ":memory:")
-	if err != nil {
-		panic(err)
-	}
-
-	if _, err := db.ExecContext(ctx, backendDDL); err != nil {
-		panic(err)
-	}
-
-	queries := repository.New(db)
-
 	cli := humacli.New(func(hooks humacli.Hooks, opts *Options) {
+		ctx := context.Background()
+
+		dbUri := fmt.Sprintf("file:%s?_foreign_keys", opts.StorePath)
+		db, err := sql.Open("sqlite3", dbUri)
+		if err != nil {
+			panic(err)
+		}
+
+		if _, err := db.ExecContext(ctx, backendDDL); err != nil {
+			panic(err)
+		}
+
+		queries := repository.New(db)
 		router := echo.New()
 		router.Use(middleware.Logger())
 
