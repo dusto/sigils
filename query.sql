@@ -1,21 +1,21 @@
--- name: InsertConfig :one
-INSERT INTO base (name, config) VALUES (?, ?)
+-- name: InsertCluster :one
+INSERT INTO clusters (name, endpoint) VALUES (?, ?)
 RETURNING id;
 
--- name: UpdateConfig :exec
-UPDATE base SET name = ?, config = ? WHERE id = ?;
+-- name: InsertClusterConfig :exec
+INSERT INTO cluster_configs (clus_id, node_type, config) VALUES (?, ?, ?);
 
--- name: DeleteConfig :exec
-DELETE FROM base where id = ?;
+-- name: DeleteCluster :exec
+DELETE FROM clusters where id = ?;
 
--- name: GetConfigById :one
-SELECT * FROM base WHERE id = ? LIMIT 1;
+-- name: GetClusterById :one
+SELECT * FROM clusters WHERE id = ? LIMIT 1;
 
--- name: GetConfigByName :one
-SELECT * FROM base WHERE name = ? LIMIT 1;
+-- name: GetClusterByName :one
+SELECT * FROM clusters WHERE name = ? LIMIT 1;
 
--- name: ListConfigs :many
-SELECT * FROM base;
+-- name: ListClusters :many
+SELECT * FROM clusters;
 
 -- name: InsertProfile :one
 INSERT INTO profiles ( name ) VALUES ( ? )
@@ -44,11 +44,11 @@ RETURNING id;
 SELECT * FROM patches where profile_id = ?; 
 
 -- name: InsertHost :one
-INSERT INTO hosts ( fqdn, base_type, network ) VALUES ( ?, ?, ? )
+INSERT INTO hosts ( fqdn, node_type, network ) VALUES ( ?, ?, ? )
 RETURNING id;
 
 -- name: UpdateHost :exec
-UPDATE hosts set fqdn = ?, base_type = ?, network = ? where id = ?;
+UPDATE hosts set fqdn = ?, node_type = ?, network = ? where id = ?;
 
 -- name: DeleteHost :exec
 DELETE FROM hosts where id = ?;
@@ -70,3 +70,15 @@ SELECT host_profiles.profile_id, profiles.name, patches.patch FROM host_profiles
 JOIN profiles ON profiles.id = host_profiles.profile_id
 JOIN patches ON  patches.profile_id = host_profiles.profile_id
 WHERE host_id = ?;
+
+-- name: AttachHostCluster :exec
+INSERT INTO host_clusters (host_id, clus_id) VALUES ( ?, ? );
+
+-- name: DeleteHostCluster :exec
+DELETE FROM host_clusters where host_id = ? and clus_id = ?;
+
+-- name: GetHostClusters :many
+SELECT hosts.id, hosts.fqdn, clusters.id, clusters.name  FROM host_clusters
+JOIN clusters ON clusters.id = host_clusters.clus_id
+JOIN hosts ON hosts.id = host_clusters.host_id
+WHERE host_clusters.host_id = ?;

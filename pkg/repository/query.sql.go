@@ -10,6 +10,20 @@ import (
 	"database/sql"
 )
 
+const attachHostCluster = `-- name: AttachHostCluster :exec
+INSERT INTO host_clusters (host_id, clus_id) VALUES ( ?, ? )
+`
+
+type AttachHostClusterParams struct {
+	HostID int64
+	ClusID int64
+}
+
+func (q *Queries) AttachHostCluster(ctx context.Context, arg AttachHostClusterParams) error {
+	_, err := q.db.ExecContext(ctx, attachHostCluster, arg.HostID, arg.ClusID)
+	return err
+}
+
 const attachHostProfile = `-- name: AttachHostProfile :exec
 INSERT INTO host_profiles (host_id, profile_id) VALUES ( ?, ? )
 `
@@ -24,12 +38,12 @@ func (q *Queries) AttachHostProfile(ctx context.Context, arg AttachHostProfilePa
 	return err
 }
 
-const deleteConfig = `-- name: DeleteConfig :exec
-DELETE FROM base where id = ?
+const deleteCluster = `-- name: DeleteCluster :exec
+DELETE FROM clusters where id = ?
 `
 
-func (q *Queries) DeleteConfig(ctx context.Context, id int64) error {
-	_, err := q.db.ExecContext(ctx, deleteConfig, id)
+func (q *Queries) DeleteCluster(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteCluster, id)
 	return err
 }
 
@@ -39,6 +53,20 @@ DELETE FROM hosts where id = ?
 
 func (q *Queries) DeleteHost(ctx context.Context, id int64) error {
 	_, err := q.db.ExecContext(ctx, deleteHost, id)
+	return err
+}
+
+const deleteHostCluster = `-- name: DeleteHostCluster :exec
+DELETE FROM host_clusters where host_id = ? and clus_id = ?
+`
+
+type DeleteHostClusterParams struct {
+	HostID int64
+	ClusID int64
+}
+
+func (q *Queries) DeleteHostCluster(ctx context.Context, arg DeleteHostClusterParams) error {
+	_, err := q.db.ExecContext(ctx, deleteHostCluster, arg.HostID, arg.ClusID)
 	return err
 }
 
@@ -65,30 +93,30 @@ func (q *Queries) DeleteProfile(ctx context.Context, id int64) error {
 	return err
 }
 
-const getConfigById = `-- name: GetConfigById :one
-SELECT id, name, config FROM base WHERE id = ? LIMIT 1
+const getClusterById = `-- name: GetClusterById :one
+SELECT id, name, endpoint FROM clusters WHERE id = ? LIMIT 1
 `
 
-func (q *Queries) GetConfigById(ctx context.Context, id int64) (Base, error) {
-	row := q.db.QueryRowContext(ctx, getConfigById, id)
-	var i Base
-	err := row.Scan(&i.ID, &i.Name, &i.Config)
+func (q *Queries) GetClusterById(ctx context.Context, id int64) (Cluster, error) {
+	row := q.db.QueryRowContext(ctx, getClusterById, id)
+	var i Cluster
+	err := row.Scan(&i.ID, &i.Name, &i.Endpoint)
 	return i, err
 }
 
-const getConfigByName = `-- name: GetConfigByName :one
-SELECT id, name, config FROM base WHERE name = ? LIMIT 1
+const getClusterByName = `-- name: GetClusterByName :one
+SELECT id, name, endpoint FROM clusters WHERE name = ? LIMIT 1
 `
 
-func (q *Queries) GetConfigByName(ctx context.Context, name string) (Base, error) {
-	row := q.db.QueryRowContext(ctx, getConfigByName, name)
-	var i Base
-	err := row.Scan(&i.ID, &i.Name, &i.Config)
+func (q *Queries) GetClusterByName(ctx context.Context, name string) (Cluster, error) {
+	row := q.db.QueryRowContext(ctx, getClusterByName, name)
+	var i Cluster
+	err := row.Scan(&i.ID, &i.Name, &i.Endpoint)
 	return i, err
 }
 
 const getHostByFqdn = `-- name: GetHostByFqdn :one
-SELECT id, fqdn, base_type, network FROM hosts where fqdn = ? LIMIT 1
+SELECT id, fqdn, node_type, network FROM hosts where fqdn = ? LIMIT 1
 `
 
 func (q *Queries) GetHostByFqdn(ctx context.Context, fqdn string) (Host, error) {
@@ -97,14 +125,14 @@ func (q *Queries) GetHostByFqdn(ctx context.Context, fqdn string) (Host, error) 
 	err := row.Scan(
 		&i.ID,
 		&i.Fqdn,
-		&i.BaseType,
+		&i.NodeType,
 		&i.Network,
 	)
 	return i, err
 }
 
 const getHostById = `-- name: GetHostById :one
-SELECT id, fqdn, base_type, network FROM hosts where id = ? LIMIT 1
+SELECT id, fqdn, node_type, network FROM hosts where id = ? LIMIT 1
 `
 
 func (q *Queries) GetHostById(ctx context.Context, id int64) (Host, error) {
@@ -113,10 +141,52 @@ func (q *Queries) GetHostById(ctx context.Context, id int64) (Host, error) {
 	err := row.Scan(
 		&i.ID,
 		&i.Fqdn,
-		&i.BaseType,
+		&i.NodeType,
 		&i.Network,
 	)
 	return i, err
+}
+
+const getHostClusters = `-- name: GetHostClusters :many
+SELECT hosts.id, hosts.fqdn, clusters.id, clusters.name  FROM host_clusters
+JOIN clusters ON clusters.id = host_clusters.clus_id
+JOIN hosts ON hosts.id = host_clusters.host_id
+WHERE host_clusters.host_id = ?
+`
+
+type GetHostClustersRow struct {
+	ID   int64
+	Fqdn string
+	ID_2 int64
+	Name string
+}
+
+func (q *Queries) GetHostClusters(ctx context.Context, hostID int64) ([]GetHostClustersRow, error) {
+	rows, err := q.db.QueryContext(ctx, getHostClusters, hostID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetHostClustersRow
+	for rows.Next() {
+		var i GetHostClustersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Fqdn,
+			&i.ID_2,
+			&i.Name,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getHostProfiles = `-- name: GetHostProfiles :many
@@ -204,36 +274,51 @@ func (q *Queries) GetProfilePatches(ctx context.Context, profileID sql.NullInt64
 	return items, nil
 }
 
-const insertConfig = `-- name: InsertConfig :one
-INSERT INTO base (name, config) VALUES (?, ?)
+const insertCluster = `-- name: InsertCluster :one
+INSERT INTO clusters (name, endpoint) VALUES (?, ?)
 RETURNING id
 `
 
-type InsertConfigParams struct {
-	Name   string
-	Config string
+type InsertClusterParams struct {
+	Name     string
+	Endpoint string
 }
 
-func (q *Queries) InsertConfig(ctx context.Context, arg InsertConfigParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, insertConfig, arg.Name, arg.Config)
+func (q *Queries) InsertCluster(ctx context.Context, arg InsertClusterParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, insertCluster, arg.Name, arg.Endpoint)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
 }
 
+const insertClusterConfig = `-- name: InsertClusterConfig :exec
+INSERT INTO cluster_configs (clus_id, node_type, config) VALUES (?, ?, ?)
+`
+
+type InsertClusterConfigParams struct {
+	ClusID   int64
+	NodeType int64
+	Config   string
+}
+
+func (q *Queries) InsertClusterConfig(ctx context.Context, arg InsertClusterConfigParams) error {
+	_, err := q.db.ExecContext(ctx, insertClusterConfig, arg.ClusID, arg.NodeType, arg.Config)
+	return err
+}
+
 const insertHost = `-- name: InsertHost :one
-INSERT INTO hosts ( fqdn, base_type, network ) VALUES ( ?, ?, ? )
+INSERT INTO hosts ( fqdn, node_type, network ) VALUES ( ?, ?, ? )
 RETURNING id
 `
 
 type InsertHostParams struct {
 	Fqdn     string
-	BaseType int64
+	NodeType int64
 	Network  string
 }
 
 func (q *Queries) InsertHost(ctx context.Context, arg InsertHostParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, insertHost, arg.Fqdn, arg.BaseType, arg.Network)
+	row := q.db.QueryRowContext(ctx, insertHost, arg.Fqdn, arg.NodeType, arg.Network)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
@@ -268,20 +353,20 @@ func (q *Queries) InsertProfile(ctx context.Context, name string) (int64, error)
 	return id, err
 }
 
-const listConfigs = `-- name: ListConfigs :many
-SELECT id, name, config FROM base
+const listClusters = `-- name: ListClusters :many
+SELECT id, name, endpoint FROM clusters
 `
 
-func (q *Queries) ListConfigs(ctx context.Context) ([]Base, error) {
-	rows, err := q.db.QueryContext(ctx, listConfigs)
+func (q *Queries) ListClusters(ctx context.Context) ([]Cluster, error) {
+	rows, err := q.db.QueryContext(ctx, listClusters)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Base
+	var items []Cluster
 	for rows.Next() {
-		var i Base
-		if err := rows.Scan(&i.ID, &i.Name, &i.Config); err != nil {
+		var i Cluster
+		if err := rows.Scan(&i.ID, &i.Name, &i.Endpoint); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -322,28 +407,13 @@ func (q *Queries) ListProfiles(ctx context.Context) ([]Profile, error) {
 	return items, nil
 }
 
-const updateConfig = `-- name: UpdateConfig :exec
-UPDATE base SET name = ?, config = ? WHERE id = ?
-`
-
-type UpdateConfigParams struct {
-	Name   string
-	Config string
-	ID     int64
-}
-
-func (q *Queries) UpdateConfig(ctx context.Context, arg UpdateConfigParams) error {
-	_, err := q.db.ExecContext(ctx, updateConfig, arg.Name, arg.Config, arg.ID)
-	return err
-}
-
 const updateHost = `-- name: UpdateHost :exec
-UPDATE hosts set fqdn = ?, base_type = ?, network = ? where id = ?
+UPDATE hosts set fqdn = ?, node_type = ?, network = ? where id = ?
 `
 
 type UpdateHostParams struct {
 	Fqdn     string
-	BaseType int64
+	NodeType int64
 	Network  string
 	ID       int64
 }
@@ -351,7 +421,7 @@ type UpdateHostParams struct {
 func (q *Queries) UpdateHost(ctx context.Context, arg UpdateHostParams) error {
 	_, err := q.db.ExecContext(ctx, updateHost,
 		arg.Fqdn,
-		arg.BaseType,
+		arg.NodeType,
 		arg.Network,
 		arg.ID,
 	)

@@ -8,22 +8,39 @@ import (
 	"database/sql"
 )
 
-type Base struct {
-	ID     int64
-	Name   string
-	Config string
+type Cluster struct {
+	ID       int64
+	Name     string
+	Endpoint string
+}
+
+type ClusterConfig struct {
+	ID       int64
+	ClusID   int64
+	NodeType int64
+	Config   string
 }
 
 type Host struct {
 	ID       int64
 	Fqdn     string
-	BaseType int64
+	NodeType int64
 	Network  string
+}
+
+type HostCluster struct {
+	HostID int64
+	ClusID int64
 }
 
 type HostProfile struct {
 	HostID    int64
 	ProfileID int64
+}
+
+type NodeType struct {
+	ID   int64
+	Name string
 }
 
 type Patch struct {
