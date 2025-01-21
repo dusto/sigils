@@ -16,8 +16,8 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 
-	"github.com/dusto/sigils/pkg/handler"
 	"github.com/dusto/sigils/pkg/repository"
+	"github.com/dusto/sigils/pkg/route"
 )
 
 //go:embed schema.sql
@@ -52,7 +52,7 @@ func main() {
 
 		api := humachi.New(router, huma.DefaultConfig("Sigils", "0.0.1"))
 
-		handle := handler.New(api, queries)
+		handle := route.NewHandler(api, queries)
 		handle.Register()
 
 		// One off define style for docs

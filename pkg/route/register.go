@@ -1,4 +1,4 @@
-package handler
+package route
 
 import (
 	"net/http"
@@ -13,32 +13,32 @@ func (h *Handler) Register() {
 		OperationID: "list-configs",
 		Method:      http.MethodGet,
 		Path:        "/clusters",
-		Summary:     "List Machine Clusters",
+		Summary:     "List Clusters",
 	}, h.ClusterGetAnyOf)
 	huma.Register(h.api, huma.Operation{
 		OperationID: "get-configs",
 		Method:      http.MethodGet,
-		Path:        "/cluster/{id}",
-		Summary:     "Get Machine Cluster",
+		Path:        "/clusters/{id}",
+		Summary:     "Get Cluster",
 	}, h.ClusterGetOneOf)
 	huma.Register(h.api, huma.Operation{
 		OperationID:   "post-configs",
 		Method:        http.MethodPost,
-		Path:          "/cluster/add",
-		Summary:       "Add new Machine Cluster",
+		Path:          "/clusters",
+		Summary:       "Import/Manually Cluster",
 		DefaultStatus: http.StatusCreated,
 	}, h.ClusterPost)
 	huma.Register(h.api, huma.Operation{
 		OperationID: "delete-configs",
 		Method:      http.MethodDelete,
-		Path:        "/cluster/{id}",
-		Summary:     "Delete Machine Cluster",
+		Path:        "/clusters/{id}",
+		Summary:     "Delete Cluster",
 	}, h.ClusterDelete)
 	huma.Register(h.api, huma.Operation{
 		OperationID:   "gen-configs",
 		Method:        http.MethodPost,
-		Path:          "/cluster/gen",
-		Summary:       "Generate new Machine Cluster",
+		Path:          "/clusters/generate",
+		Summary:       "Automatically generate new Cluster",
 		DefaultStatus: http.StatusCreated,
 	}, h.ClusterGen)
 }
