@@ -9,10 +9,10 @@ import (
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/danielgtaylor/huma/v2/adapters/humaecho"
+	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/danielgtaylor/huma/v2/humacli"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 
 	_ "github.com/mattn/go-sqlite3"
 
@@ -44,17 +44,21 @@ func main() {
 		}
 
 		queries := repository.New(db)
-		router := echo.New()
-		router.Use(middleware.Logger())
+		router := chi.NewRouter()
+		router.Use(middleware.RequestID)
+		router.Use(middleware.RealIP)
+		router.Use(middleware.Logger)
+		router.Use(middleware.Recoverer)
 
-		api := humaecho.New(router, huma.DefaultConfig("Sigils", "0.0.1"))
+		api := humachi.New(router, huma.DefaultConfig("Sigils", "0.0.1"))
 
 		handle := handler.New(api, queries)
 		handle.Register()
 
 		// One off define style for docs
-		router.GET("/docs", func(ctx echo.Context) error {
-			return ctx.HTML(http.StatusOK, string(`<!doctype html>
+		router.Get("/docs", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/html")
+			w.Write([]byte(`<!doctype html>
         <html>
           <head>
             <title>API Reference</title>
