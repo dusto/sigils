@@ -17,6 +17,9 @@ SELECT * FROM clusters WHERE name = ? LIMIT 1;
 -- name: ListClusters :many
 SELECT * FROM clusters;
 
+-- name: ListClustersSearch :many
+SELECT * FROM clusters WHERE name GLOB ?;
+
 -- name: InsertProfile :one
 INSERT INTO profiles ( name ) VALUES ( ? )
 RETURNING id;

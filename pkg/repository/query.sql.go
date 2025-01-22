@@ -380,6 +380,33 @@ func (q *Queries) ListClusters(ctx context.Context) ([]Cluster, error) {
 	return items, nil
 }
 
+const listClustersSearch = `-- name: ListClustersSearch :many
+SELECT id, name, endpoint FROM clusters WHERE name GLOB ?
+`
+
+func (q *Queries) ListClustersSearch(ctx context.Context, name string) ([]Cluster, error) {
+	rows, err := q.db.QueryContext(ctx, listClustersSearch, name)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Cluster
+	for rows.Next() {
+		var i Cluster
+		if err := rows.Scan(&i.ID, &i.Name, &i.Endpoint); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listProfiles = `-- name: ListProfiles :many
 SELECT id, name FROM profiles
 `

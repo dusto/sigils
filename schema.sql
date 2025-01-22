@@ -2,7 +2,9 @@
 CREATE TABLE IF NOT EXISTS clusters (
   id INTEGER PRIMARY KEY,
   name TEXT NOT NULL,
-  endpoint TEXT NOT NULL
+  endpoint TEXT NOT NULL,
+  UNIQUE(name) ON CONFLICT FAIL,
+  UNIQUE(endpoint) ON CONFLICT FAIL
 );
 CREATE INDEX IF NOT EXISTS clusters_name_idx on clusters (name);
 
