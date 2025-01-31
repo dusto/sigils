@@ -12,13 +12,6 @@ SELECT clusters.uuid, clusters.name, clusters.endpoint, cluster_configs.config_t
 JOIN cluster_configs ON cluster_configs.cluster_uuid = clusters.uuid
 WHERE uuid = ?;
 
--- name: ListClusters :many
-SELECT clusters.uuid, clusters.name, clusters.endpoint FROM clusters;
-
--- name: GetClusterConfigs :many
-SELECT config_type, config FROM cluster_configs
-WHERE cluster_uuid = ?;
-
 -- name: InsertProfile :one
 INSERT INTO profiles ( name ) VALUES ( ? )
 RETURNING id;

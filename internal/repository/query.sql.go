@@ -121,39 +121,6 @@ func (q *Queries) GetClusterByUUID(ctx context.Context, argUuid uuid.UUID) (GetC
 	return i, err
 }
 
-const getClusterConfigs = `-- name: GetClusterConfigs :many
-SELECT config_type, config FROM cluster_configs
-WHERE cluster_uuid = ?
-`
-
-type GetClusterConfigsRow struct {
-	ConfigType int64
-	Config     string
-}
-
-func (q *Queries) GetClusterConfigs(ctx context.Context, clusterUuid uuid.UUID) ([]GetClusterConfigsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getClusterConfigs, clusterUuid)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetClusterConfigsRow
-	for rows.Next() {
-		var i GetClusterConfigsRow
-		if err := rows.Scan(&i.ConfigType, &i.Config); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getHostByFqdn = `-- name: GetHostByFqdn :one
 SELECT uuid, fqdn, node_type FROM hosts where fqdn = ? LIMIT 1
 `
@@ -394,33 +361,6 @@ func (q *Queries) InsertProfile(ctx context.Context, name string) (int64, error)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
-}
-
-const listClusters = `-- name: ListClusters :many
-SELECT clusters.uuid, clusters.name, clusters.endpoint FROM clusters
-`
-
-func (q *Queries) ListClusters(ctx context.Context) ([]Cluster, error) {
-	rows, err := q.db.QueryContext(ctx, listClusters)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Cluster
-	for rows.Next() {
-		var i Cluster
-		if err := rows.Scan(&i.Uuid, &i.Name, &i.Endpoint); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const listProfiles = `-- name: ListProfiles :many
