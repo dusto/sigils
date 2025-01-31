@@ -7,6 +7,9 @@ import (
 	"github.com/dusto/sigils/internal/repository"
 	"github.com/dusto/sigils/internal/talosconfig"
 	"github.com/google/uuid"
+
+	clientconfig "github.com/siderolabs/talos/pkg/machinery/client/config"
+	"github.com/siderolabs/talos/pkg/machinery/config/configloader"
 )
 
 type ClusterOutput struct {
@@ -24,7 +27,7 @@ type ClusterOneOfInput struct {
 }
 
 type ClusterBody struct {
-	Uuid     string          `json:"uuid,omitempty" format:"uuid" doc:"Cluster ID"`
+	Uuid     string          `json:"uuid,omitempty" format:"uuid" doc:"Cluster ID" required:"false"`
 	Name     string          `json:"name" doc:"Cluster Name" required:"true"`
 	Endpoint string          `json:"endpoint" doc:"Cluster Endpoint" required:"true"`
 	Configs  []ClusterConfig `json:"configs,omitempty" doc:"Cluster Configs" require:"false"`
@@ -85,13 +88,9 @@ func (h *Handler) ClusterGetAnyOf(ctx context.Context, input *ClusterAnyOfInput)
 		}
 
 		for _, config := range cluster.Configs {
-			ctype := ""
-			if config.ConfigType == talosconfig.ConfigTypeControlPlane {
-				ctype = "controlplane"
-			} else if config.ConfigType == talosconfig.ConfigTypeWorker {
-				ctype = "worker"
-			} else {
-				ctype = "talosctl"
+			ctype, err := talosconfig.ConfigTypeToString(config.ConfigType)
+			if err != nil {
+				return nil, huma.Error422UnprocessableEntity("Problem infering config type", err)
 			}
 			clus.Configs = append(clus.Configs, ClusterConfig{
 				ConfigType: ctype,
@@ -110,13 +109,52 @@ func (h *Handler) ClusterPost(ctx context.Context, input *ClusterPostInput) (*Cl
 		if cIn.Uuid == "" {
 			cIn.Uuid = uuid.New().String()
 		}
+
+		// TODO: Add transaction
+
 		err := h.configDB.InsertCluster(ctx, repository.InsertClusterParams{
 			Uuid:     uuid.MustParse(cIn.Uuid),
 			Name:     cIn.Name,
 			Endpoint: cIn.Endpoint,
 		})
+
 		if err != nil {
 			return resp, huma.Error500InternalServerError("Could not add cluster", err)
+		}
+
+		if len(cIn.Configs) > 0 {
+			for _, config := range cIn.Configs {
+				ctype, err := talosconfig.ConfigTypeToInt(config.ConfigType)
+				if err != nil {
+					return nil, huma.Error422UnprocessableEntity("Problem infering config type", err)
+				}
+
+				switch ctype {
+				case talosconfig.ConfigTypeTalosctl:
+					_, err := clientconfig.FromString(config.Config)
+
+					if err != nil {
+						return nil, huma.Error422UnprocessableEntity("Problem validating Talosctl config", err)
+					}
+
+				case talosconfig.ConfigTypeControlPlane, talosconfig.ConfigTypeWorker:
+					_, err := configloader.NewFromBytes([]byte(config.Config))
+
+					if err != nil {
+						return nil, huma.Error422UnprocessableEntity("Problem validating Controlplane/Worker config", err)
+					}
+
+				}
+
+				err = h.configDB.InsertClusterConfig(ctx, repository.InsertClusterConfigParams{
+					ClusterUuid: uuid.MustParse(cIn.Uuid),
+					ConfigType:  ctype,
+					Config:      string(config.Config),
+				})
+				if err != nil {
+					return nil, huma.Error500InternalServerError("Could not save config", err)
+				}
+			}
 		}
 	}
 
@@ -141,6 +179,8 @@ func (h *Handler) ClusterGen(ctx context.Context, input *ClusterGenPostInput) (*
 	cluster.Uuid = uuid.New().String()
 	cluster.Name = input.Body[0].Name
 	cluster.Endpoint = input.Body[0].Endpoint
+
+	// TODO: Add transaction
 
 	err := h.configDB.InsertCluster(ctx, repository.InsertClusterParams{
 		Uuid:     uuid.MustParse(cluster.Uuid),
