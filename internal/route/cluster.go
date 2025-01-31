@@ -2,7 +2,6 @@ package route
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dusto/sigils/internal/repository"
@@ -110,7 +109,6 @@ func (h *Handler) ClusterPost(ctx context.Context, input *ClusterPostInput) (*Cl
 	for _, cIn := range input.Body {
 		if cIn.Uuid == "" {
 			cIn.Uuid = uuid.New().String()
-			fmt.Printf("New Uuid: %s", cIn.Uuid)
 		}
 		err := h.configDB.InsertCluster(ctx, repository.InsertClusterParams{
 			Uuid:     uuid.MustParse(cIn.Uuid),
