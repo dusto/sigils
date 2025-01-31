@@ -8,7 +8,7 @@ import (
 
 func (h *Handler) Register() {
 
-	// config endpoint
+	// cluster endpoint
 	huma.Register(h.api, huma.Operation{
 		OperationID: "list-configs",
 		Method:      http.MethodGet,
@@ -18,7 +18,7 @@ func (h *Handler) Register() {
 	huma.Register(h.api, huma.Operation{
 		OperationID: "get-configs",
 		Method:      http.MethodGet,
-		Path:        "/clusters/{id}",
+		Path:        "/clusters/{uuid}",
 		Summary:     "Get Cluster",
 	}, h.ClusterGetOneOf)
 	huma.Register(h.api, huma.Operation{
@@ -31,7 +31,7 @@ func (h *Handler) Register() {
 	huma.Register(h.api, huma.Operation{
 		OperationID: "delete-configs",
 		Method:      http.MethodDelete,
-		Path:        "/clusters/{id}",
+		Path:        "/clusters/{uuid}",
 		Summary:     "Delete Cluster",
 	}, h.ClusterDelete)
 	huma.Register(h.api, huma.Operation{
@@ -41,4 +41,6 @@ func (h *Handler) Register() {
 		Summary:       "Automatically generate new Cluster",
 		DefaultStatus: http.StatusCreated,
 	}, h.ClusterGen)
+
+	// hosts endpoint
 }

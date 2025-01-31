@@ -5,48 +5,45 @@
 package repository
 
 import (
-	"database/sql"
+	"github.com/google/uuid"
 )
 
 type Cluster struct {
-	ID       int64
+	Uuid     uuid.UUID
 	Name     string
 	Endpoint string
 }
 
 type ClusterConfig struct {
-	ID       int64
-	ClusID   int64
-	NodeType int64
-	Config   string
+	ID          int64
+	ClusterUuid uuid.UUID
+	ConfigType  int64
+	Config      string
 }
 
 type Host struct {
-	ID       int64
+	Uuid     uuid.UUID
 	Fqdn     string
 	NodeType int64
-	Network  string
 }
 
 type HostCluster struct {
-	HostID int64
-	ClusID int64
+	HostUuid    []byte
+	ClusterUuid uuid.UUID
 }
 
 type HostProfile struct {
-	HostID    int64
+	HostUuid  []byte
 	ProfileID int64
 }
 
-type NodeType struct {
-	ID   int64
-	Name string
-}
-
 type Patch struct {
-	ID        int64
-	ProfileID sql.NullInt64
-	Patch     string
+	ID           int64
+	ProfileID    int64
+	Controlplane int64
+	Worker       int64
+	Host         []byte
+	Patch        string
 }
 
 type Profile struct {

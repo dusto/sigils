@@ -2,7 +2,7 @@ package route
 
 import (
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/dusto/sigils/pkg/repository"
+	"github.com/dusto/sigils/internal/repository"
 )
 
 type Handler struct {

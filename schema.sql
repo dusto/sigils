@@ -1,27 +1,24 @@
 -- Store Cluster configs
 CREATE TABLE IF NOT EXISTS clusters (
-  id INTEGER PRIMARY KEY,
+  uuid BLOB NOT NULL,
   name TEXT NOT NULL,
   endpoint TEXT NOT NULL,
   UNIQUE(name) ON CONFLICT FAIL,
-  UNIQUE(endpoint) ON CONFLICT FAIL
+  UNIQUE(endpoint) ON CONFLICT FAIL,
+  UNIQUE(uuid) ON CONFLICT FAIL
 );
 CREATE INDEX IF NOT EXISTS clusters_name_idx on clusters (name);
+CREATE INDEX IF NOT EXISTS clusters_uuid_idx on clusters (uuid);
 
 CREATE TABLE IF NOT EXISTS cluster_configs (
   id INTEGER PRIMARY KEY,
-  clus_id INTEGER NOT NULL,
-  node_type INTEGER NOT NULL,
+  cluster_uuid BLOB NOT NULL,
+  config_type INTEGER NOT NULL,
   config TEXT NOT NULL,
-  FOREIGN KEY (clus_id) REFERENCES clusters(id) ON DELETE CASCADE
+  FOREIGN KEY (cluster_uuid) REFERENCES clusters(uuid) ON DELETE CASCADE
 );
-CREATE INDEX IF NOT EXISTS cluster_configs_idx on cluster_configs (clus_id);
-CREATE INDEX IF NOT EXISTS cluster_configs_node_idx on cluster_configs (node_type);
-
-CREATE TABLE IF NOT EXISTS node_types (
-  id INTEGER PRIMARY KEY,
-  name TEXT NOT NULL
-);
+CREATE INDEX IF NOT EXISTS cluster_configs_idx on cluster_configs (cluster_uuid);
+CREATE INDEX IF NOT EXISTS cluster_configs_type_idx on cluster_configs (config_type);
 
 -- Store profile info
 CREATE TABLE IF NOT EXISTS profiles (
@@ -32,7 +29,10 @@ CREATE TABLE IF NOT EXISTS profiles (
 -- Store profile patch sets
 CREATE TABLE IF NOT EXISTS patches (
   id INTEGER PRIMARY KEY,
-  profile_id INTEGER,
+  profile_id INTEGER NOT NULL,
+  controlplane INTEGER NOT NULL DEFAULT 0,
+  worker INTEGER NOT NULL DEFAULT 0,
+  host BLOB NOT NULL DEFAULT 0,
   patch TEXT NOT NULL,
   FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
 );
@@ -40,33 +40,33 @@ CREATE INDEX IF NOT EXISTS profile_patches_idx on patches ( profile_id );
 
 -- Store hosts
 CREATE TABLE IF NOT EXISTS hosts (
-  id INTEGER PRIMARY KEY,
+  uuid BLOB NOT NULL,
   fqdn TEXT NOT NULL,
-  node_type INTEGER NOT NULL,
-  network TEXT NOT NULL
+  node_type INTEGER NOT NULL
 );
+CREATE INDEX IF NOT EXISTS host_uuid_idx on hosts ( uuid );
 CREATE INDEX IF NOT EXISTS host_fqdn_idx on hosts ( fqdn );
 CREATE INDEX IF NOT EXISTS host_node_type_idx on hosts ( node_type );
 
 
 -- Store hosts profile associations
 CREATE TABLE IF NOT EXISTS host_profiles (
-  host_id INTEGER NOT NULL,
+  host_uuid BLOB NOT NULL,
   profile_id INTEGER NOT NULL,
-  FOREIGN KEY (host_id) REFERENCES hosts(id) ON DELETE CASCADE,
+  FOREIGN KEY (host_uuid) REFERENCES hosts(uuid) ON DELETE CASCADE,
   FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE,
-  primary key (host_id, profile_id)
+  primary key (host_uuid, profile_id)
  );
 CREATE INDEX IF NOT EXISTS host_profiles_idx on host_profiles (profile_id);
-CREATE INDEX IF NOT EXISTS host_hosts_idx on host_profiles (host_id);
+CREATE INDEX IF NOT EXISTS host_hosts_idx on host_profiles (host_uuid);
 
 -- Store hosts cluster associations
 CREATE TABLE IF NOT EXISTS host_clusters (
-  host_id INTEGER NOT NULL,
-  clus_id INTEGER NOT NULL,
-  FOREIGN KEY (host_id) REFERENCES hosts(id) ON DELETE CASCADE,
-  FOREIGN KEY (clus_id) REFERENCES clusters(id) ON DELETE CASCADE,
-  primary key (host_id, clus_id)
+  host_uuid BLOB NOT NULL,
+  cluster_uuid INTEGER NOT NULL,
+  FOREIGN KEY (host_uuid) REFERENCES hosts(uuid) ON DELETE CASCADE,
+  FOREIGN KEY (cluster_uuid) REFERENCES clusters(uuid) ON DELETE CASCADE,
+  primary key (host_uuid, cluster_uuid)
  );
-CREATE INDEX IF NOT EXISTS host_clusters_clus_idx on host_clusters (clus_id);
-CREATE INDEX IF NOT EXISTS host_cluster_host_idx on host_clusters (host_id);
+CREATE INDEX IF NOT EXISTS host_clusters_cluster_uuidx on host_clusters (cluster_uuid);
+CREATE INDEX IF NOT EXISTS host_cluster_host_idx on host_clusters (host_uuid);

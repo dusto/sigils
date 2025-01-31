@@ -16,8 +16,8 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 
-	"github.com/dusto/sigils/pkg/repository"
-	"github.com/dusto/sigils/pkg/route"
+	"github.com/dusto/sigils/internal/repository"
+	"github.com/dusto/sigils/internal/route"
 )
 
 //go:embed schema.sql

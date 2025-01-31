@@ -6,4 +6,17 @@ sql:
     gen:
       go:
         package: "repository"
-        out: "pkg/repository"
+        out: "internal/repository"
+        overrides:
+          - column: "*.uuid"
+            go_type:
+              import: "github.com/google/uuid"
+              type: "UUID"
+          - column: "*.cluster_uuid"
+            go_type:
+              import: "github.com/google/uuid"
+              type: "UUID"
+          - column: "cview.configs"
+            go_type:
+              type: "Config"
+              slice: true
