@@ -16,7 +16,7 @@ INSERT INTO host_clusters (host_uuid, cluster_uuid) VALUES (?, ?)
 `
 
 type AttachHostClusterParams struct {
-	HostUuid    []byte
+	HostUuid    uuid.UUID
 	ClusterUuid uuid.UUID
 }
 
@@ -30,7 +30,7 @@ INSERT INTO host_profiles (host_uuid, profile_id) VALUES (?, ?)
 `
 
 type AttachHostProfileParams struct {
-	HostUuid  []byte
+	HostUuid  uuid.UUID
 	ProfileID int64
 }
 

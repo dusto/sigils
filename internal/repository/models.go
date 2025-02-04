@@ -8,6 +8,19 @@ import (
 	"github.com/google/uuid"
 )
 
+type Cluster struct {
+	Uuid     uuid.UUID
+	Name     string
+	Endpoint string
+}
+
+type ClusterConfig struct {
+	ID          int64
+	ClusterUuid uuid.UUID
+	ConfigType  string
+	Config      string
+}
+
 type Host struct {
 	Uuid     uuid.UUID
 	Fqdn     string
@@ -15,12 +28,12 @@ type Host struct {
 }
 
 type HostCluster struct {
-	HostUuid    []byte
+	HostUuid    uuid.UUID
 	ClusterUuid uuid.UUID
 }
 
 type HostProfile struct {
-	HostUuid  []byte
+	HostUuid  uuid.UUID
 	ProfileID int64
 }
 

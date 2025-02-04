@@ -16,6 +16,10 @@ sql:
             go_type:
               import: "github.com/google/uuid"
               type: "UUID"
+          - column: "*.host_uuid"
+            go_type:
+              import: "github.com/google/uuid"
+              type: "UUID"
           - column: "cview.configs"
             go_type:
               type: "Config"

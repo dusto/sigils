@@ -7,11 +7,6 @@ INSERT INTO cluster_configs (cluster_uuid, config_type, config) VALUES (?, ?, ?)
 -- name: DeleteCluster :exec
 DELETE FROM clusters where uuid = ?;
 
--- name: GetClusterByUUID :one
-SELECT clusters.uuid, clusters.name, clusters.endpoint, cluster_configs.config_type, cluster_configs.config FROM clusters
-JOIN cluster_configs ON cluster_configs.cluster_uuid = clusters.uuid
-WHERE uuid = ?;
-
 -- name: InsertProfile :one
 INSERT INTO profiles ( name ) VALUES ( ? )
 RETURNING id;

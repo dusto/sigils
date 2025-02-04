@@ -45,13 +45,6 @@ GROUP BY c.uuid
 SELECT uuid, name, endpoint, configs FROM cview
 `
 
-type GetFullClusterConfigsRow struct {
-	Uuid     uuid.UUID
-	Name     string
-	Endpoint string
-	Configs  string
-}
-
 func (q *Queries) GetFullClusterConfigs(ctx context.Context) ([]model.Cluster, error) {
 	rows, err := q.db.QueryContext(ctx, getFullClusterConfigs)
 	if err != nil {
@@ -82,19 +75,6 @@ func (q *Queries) GetFullClusterConfigs(ctx context.Context) ([]model.Cluster, e
 	return items, nil
 }
 
-type PatchRow struct {
-	Id       int64  `json:"id"`
-	NodeType int64  `json:"node_type"`
-	Fqdn     string `json:"fqdn"`
-	Patch    string `json:"patch"`
-}
-
-type ProfileRow struct {
-	ID      int64      `json:"id"`
-	Name    string     `json:"name"`
-	Patches []PatchRow `json:"patches"`
-}
-
 const getHosts = `-- name: GetHosts :many
 SELECT h.uuid, h.fqdn, h.node_type,
 json_group_array(
@@ -109,7 +89,7 @@ json_group_array(
                 'fqdn', pa.fqdn,
                 'patch', pa.patch))
     FROM patches pa
-    WHERE ((pa.node_type IN (0,h.node_type) AND pa.host = '') OR pa.fqdn = h.fqdn) AND pa.profile_id = p.id 
+    WHERE ((pa.node_type IN (0,h.node_type) AND pa.fqdn = '') OR pa.fqdn = h.fqdn) AND pa.profile_id = p.id 
     GROUP BY pa.profile_id
     )
   )
@@ -122,30 +102,25 @@ FROM hosts h
 GROUP BY h.uuid
 `
 
-type HostRow struct {
-	Uuid     uuid.UUID
-	Fqdn     string
-	NodeType int64
-	Profiles []ProfileRow
-}
-
-func (q *Queries) GetHosts(ctx context.Context) ([]HostRow, error) {
+func (q *Queries) GetHosts(ctx context.Context) ([]model.Host, error) {
 	rows, err := q.db.QueryContext(ctx, getHosts)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []HostRow
+	var items []model.Host
 	for rows.Next() {
-		var i HostRow
+		var i model.Host
+		var p model.CProfileType
 		if err := rows.Scan(
 			&i.Uuid,
 			&i.Fqdn,
 			&i.NodeType,
-			&i.Profiles,
+			&p,
 		); err != nil {
 			return nil, err
 		}
+		i.Profiles = p.Profiles
 		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
@@ -171,7 +146,7 @@ json_group_array(
                 'fqdn', pa.fqdn,
                 'patch', pa.patch))
     FROM patches pa
-    WHERE ((pa.node_type IN (0,h.node_type) AND pa.host = '') OR pa.fqdn = h.fqdn) AND pa.profile_id = p.id 
+    WHERE ((pa.node_type IN (0,h.node_type) AND pa.fqdn = '') OR pa.fqdn = h.fqdn) AND pa.profile_id = p.id 
     GROUP BY pa.profile_id
     )
   )
@@ -185,15 +160,17 @@ WHERE h.uuid = ?
 GROUP BY h.uuid
 `
 
-func (q *Queries) GetHost(ctx context.Context, id uuid.UUID) (HostRow, error) {
+func (q *Queries) GetHost(ctx context.Context, id uuid.UUID) (model.Host, error) {
 	row := q.db.QueryRowContext(ctx, getHost, id)
-	var i HostRow
+	var i model.Host
+	var p model.CProfileType
 	err := row.Scan(
 		&i.Uuid,
 		&i.Fqdn,
 		&i.NodeType,
-		&i.Profiles,
+		&p,
 	)
+	i.Profiles = p.Profiles
 	return i, err
 }
 
@@ -206,7 +183,7 @@ SELECT
     json_group_array(json_object(
                 'id', pa.id, 
                 'node_type', pa.node_type,
-                'host', pa.host,
+                'fqdn', pa.fqdn,
                 'patch', pa.patch))
     FROM patches pa
     WHERE  pa.profile_id = p.id 
@@ -217,10 +194,12 @@ WHERE p.id = ?
 GROUP BY p.id
 `
 
-func (q *Queries) GetProfile(ctx context.Context, id int64) (ProfileRow, error) {
+func (q *Queries) GetProfile(ctx context.Context, id int64) (model.Profile, error) {
 	row := q.db.QueryRowContext(ctx, getProfile, id)
-	var i ProfileRow
-	err := row.Scan(&i.ID, &i.Name, &i.Patches)
+	var i model.Profile
+	var p model.CPatchType
+	err := row.Scan(&i.Id, &i.Name, &p)
+	i.Patches = p.Patches
 	return i, err
 }
 
@@ -233,7 +212,7 @@ SELECT
     json_group_array(json_object(
                 'id', pa.id, 
                 'node_type', pa.node_type,
-                'host', pa.host,
+                'fqdn', pa.fqdn,
                 'patch', pa.patch))
     FROM patches pa
     WHERE  pa.profile_id = p.id 
@@ -243,18 +222,20 @@ FROM profiles p
 GROUP BY p.id
 `
 
-func (q *Queries) GetProfiles(ctx context.Context) ([]ProfileRow, error) {
+func (q *Queries) GetProfiles(ctx context.Context) ([]model.Profile, error) {
 	rows, err := q.db.QueryContext(ctx, getProfiles)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ProfileRow
+	var items []model.Profile
 	for rows.Next() {
-		var i ProfileRow
-		if err := rows.Scan(&i.ID, &i.Name, &i.Patches); err != nil {
+		var i model.Profile
+		var p model.CPatchType
+		if err := rows.Scan(&i.Id, &i.Name, &p); err != nil {
 			return nil, err
 		}
+		i.Patches = p.Patches
 		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {

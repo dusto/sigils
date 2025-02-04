@@ -19,10 +19,11 @@ type Cluster struct {
 type ClusterConfig struct {
 	ID          int64                  `json:"id,omitempty" doc:"ID of Config" required:"false"`
 	ClusterUuid string                 `json:"uuid,omitempty" format:"uuid" doc:"Cluster ID" required:"false"`
-	ConfigType  talosconfig.ConfigType `json:"configtype" doc:"Config type controlplane,worker,talosctl" enum:"1,2,3"`
+	ConfigType  talosconfig.ConfigType `json:"configtype" doc:"Config type controlplane,worker,talosctl" enum:"controlplane,worker,talosctl"`
 	Config      string                 `json:"config" doc:"Yaml representation of the config"`
 }
 
+// Intermediate type to parse json from sql result
 type CConfigType struct {
 	Configs []ClusterConfig
 }

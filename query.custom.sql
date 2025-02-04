@@ -1,3 +1,14 @@
+-- name: GetClusterByUUID :one
+-- IT IS HANDLED VIA A CUSTOM FUNCTION DO NOT AUTO GENERATE
+WITH cview AS (
+  SELECT c.uuid, c.name, c.endpoint , json_group_array(json_object('configtype', cc.config_type, 'config', cc.config)) configs
+FROM clusters c
+INNER JOIN cluster_configs cc on c.uuid = cc.cluster_uuid
+GROUP BY c.uuid
+)
+SELECT uuid, name, endpoint, configs FROM cview
+WHERE uuid = ?;
+
 -- name: GetFullClusterConfigs :many
 -- IT IS HANDLED VIA A CUSTOM FUNCTION DO NOT AUTO GENERATE
 WITH cview AS (
@@ -18,7 +29,7 @@ SELECT
     json_group_array(json_object(
                 'id', pa.id, 
                 'node_type', pa.node_type,
-                'host', pa.host,
+                'fqdn', pa.fqdn,
                 'patch', pa.patch))
     FROM patches pa
     WHERE  pa.profile_id = p.id 
@@ -38,7 +49,7 @@ SELECT
     json_group_array(json_object(
                 'id', pa.id, 
                 'node_type', pa.node_type,
-                'host', pa.host,
+                'fqdn', pa.fqdn,
                 'patch', pa.patch))
     FROM patches pa
     WHERE  pa.profile_id = p.id 
@@ -63,7 +74,7 @@ json_group_array(
                 'fqdn', pa.fqdn,
                 'patch', pa.patch))
     FROM patches pa
-    WHERE ((pa.node_type IN (0,h.node_type) AND pa.host = '') OR pa.fqdn = h.fqdn) AND pa.profile_id = p.id 
+    WHERE ((pa.node_type IN (0,h.node_type) AND pa.fqdn = '') OR pa.fqdn = h.fqdn) AND pa.profile_id = p.id 
     GROUP BY pa.profile_id
     )
   )
@@ -91,7 +102,7 @@ json_group_array(
                 'fqdn', pa.fqdn,
                 'patch', pa.patch))
     FROM patches pa
-    WHERE ((pa.node_type IN (0,h.node_type) AND pa.host = '') OR pa.fqdn = h.fqdn) AND pa.profile_id = p.id 
+    WHERE ((pa.node_type IN (0,h.node_type) AND pa.fqdn = '') OR pa.fqdn = h.fqdn) AND pa.profile_id = p.id 
     GROUP BY pa.profile_id
     )
   )
