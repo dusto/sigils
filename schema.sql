@@ -13,7 +13,7 @@ CREATE INDEX IF NOT EXISTS clusters_uuid_idx on clusters (uuid);
 CREATE TABLE IF NOT EXISTS cluster_configs (
   id INTEGER PRIMARY KEY,
   cluster_uuid BLOB NOT NULL,
-  config_type INTEGER NOT NULL,
+  config_type TEXT NOT NULL,
   config TEXT NOT NULL,
   FOREIGN KEY (cluster_uuid) REFERENCES clusters(uuid) ON DELETE CASCADE
 );
@@ -30,9 +30,8 @@ CREATE TABLE IF NOT EXISTS profiles (
 CREATE TABLE IF NOT EXISTS patches (
   id INTEGER PRIMARY KEY,
   profile_id INTEGER NOT NULL,
-  controlplane INTEGER NOT NULL DEFAULT 0,
-  worker INTEGER NOT NULL DEFAULT 0,
-  host BLOB NOT NULL DEFAULT 0,
+  node_type TEXT NOT NULL DEFAULT 0,
+  fqdn TEXT NOT NULL,
   patch TEXT NOT NULL,
   FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
 );
@@ -42,12 +41,11 @@ CREATE INDEX IF NOT EXISTS profile_patches_idx on patches ( profile_id );
 CREATE TABLE IF NOT EXISTS hosts (
   uuid BLOB NOT NULL,
   fqdn TEXT NOT NULL,
-  node_type INTEGER NOT NULL
+  node_type TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS host_uuid_idx on hosts ( uuid );
 CREATE INDEX IF NOT EXISTS host_fqdn_idx on hosts ( fqdn );
 CREATE INDEX IF NOT EXISTS host_node_type_idx on hosts ( node_type );
-
 
 -- Store hosts profile associations
 CREATE TABLE IF NOT EXISTS host_profiles (

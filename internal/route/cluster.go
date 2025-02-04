@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/dusto/sigils/internal/model"
 	"github.com/dusto/sigils/internal/repository"
 	"github.com/dusto/sigils/internal/talosconfig"
 	"github.com/google/uuid"
@@ -13,7 +14,7 @@ import (
 )
 
 type ClusterOutput struct {
-	Body []ClusterBody
+	Body []model.Cluster
 }
 
 type ClusterListInput struct {
@@ -26,20 +27,8 @@ type ClusterOneOfInput struct {
 	Uuid uuid.UUID `path:"uuid" required:"false"`
 }
 
-type ClusterBody struct {
-	Uuid     string          `json:"uuid,omitempty" format:"uuid" doc:"Cluster ID" required:"false"`
-	Name     string          `json:"name" doc:"Cluster Name" required:"true"`
-	Endpoint string          `json:"endpoint" doc:"Cluster Endpoint" required:"true"`
-	Configs  []ClusterConfig `json:"configs,omitempty" doc:"Cluster Configs" require:"false"`
-}
-
-type ClusterConfig struct {
-	ConfigType string `json:"configtype" doc:"Config type controlplane,worker,talosctl"`
-	Config     string `json:"config" doc:"Yaml representation of the config"`
-}
-
 type ClusterPostInput struct {
-	Body []ClusterBody
+	Body []model.Cluster
 }
 
 type ClusterGen struct {
@@ -61,12 +50,7 @@ func (h *Handler) ClusterGetOneOf(ctx context.Context, input *ClusterOneOfInput)
 		return resp, nil
 	}
 
-	cBody := ClusterBody{
-		Uuid:     cluster.Uuid.String(),
-		Name:     cluster.Name,
-		Endpoint: cluster.Endpoint,
-	}
-	resp.Body = append(resp.Body, cBody)
+	resp.Body = append(resp.Body, cluster)
 
 	return resp, nil
 }
@@ -81,23 +65,7 @@ func (h *Handler) ClusterGetAnyOf(ctx context.Context, input *ClusterAnyOfInput)
 	}
 
 	for _, cluster := range clusters {
-		clus := ClusterBody{
-			Uuid:     cluster.Uuid.String(),
-			Name:     cluster.Name,
-			Endpoint: cluster.Endpoint,
-		}
-
-		for _, config := range cluster.Configs {
-			ctype, err := talosconfig.ConfigTypeToString(config.ConfigType)
-			if err != nil {
-				return nil, huma.Error422UnprocessableEntity("Problem infering config type", err)
-			}
-			clus.Configs = append(clus.Configs, ClusterConfig{
-				ConfigType: ctype,
-				Config:     config.Config,
-			})
-		}
-		resp.Body = append(resp.Body, clus)
+		resp.Body = append(resp.Body, cluster)
 	}
 	return resp, nil
 }
@@ -106,7 +74,7 @@ func (h *Handler) ClusterPost(ctx context.Context, input *ClusterPostInput) (*Cl
 	resp := &ClusterOutput{}
 
 	for _, cIn := range input.Body {
-		if cIn.Uuid == "" {
+		if cIn.Uuid != "" {
 			cIn.Uuid = uuid.New().String()
 		}
 
@@ -124,12 +92,7 @@ func (h *Handler) ClusterPost(ctx context.Context, input *ClusterPostInput) (*Cl
 
 		if len(cIn.Configs) > 0 {
 			for _, config := range cIn.Configs {
-				ctype, err := talosconfig.ConfigTypeToInt(config.ConfigType)
-				if err != nil {
-					return nil, huma.Error422UnprocessableEntity("Problem infering config type", err)
-				}
-
-				switch ctype {
+				switch config.ConfigType {
 				case talosconfig.ConfigTypeTalosctl:
 					_, err := clientconfig.FromString(config.Config)
 
@@ -148,7 +111,7 @@ func (h *Handler) ClusterPost(ctx context.Context, input *ClusterPostInput) (*Cl
 
 				err = h.configDB.InsertClusterConfig(ctx, repository.InsertClusterConfigParams{
 					ClusterUuid: uuid.MustParse(cIn.Uuid),
-					ConfigType:  ctype,
+					ConfigType:  string(config.ConfigType),
 					Config:      string(config.Config),
 				})
 				if err != nil {
@@ -175,7 +138,7 @@ func (h *Handler) ClusterDelete(ctx context.Context, input *ClusterOneOfInput) (
 
 func (h *Handler) ClusterGen(ctx context.Context, input *ClusterGenPostInput) (*ClusterOutput, error) {
 	resp := &ClusterOutput{}
-	cluster := ClusterBody{}
+	cluster := model.Cluster{}
 	cluster.Uuid = uuid.New().String()
 	cluster.Name = input.Body[0].Name
 	cluster.Endpoint = input.Body[0].Endpoint
@@ -197,13 +160,13 @@ func (h *Handler) ClusterGen(ctx context.Context, input *ClusterGenPostInput) (*
 	}
 
 	controlPlane, _ := clusterConfigs.ControlPlaneConfig.Bytes()
-	cluster.Configs = append(cluster.Configs, ClusterConfig{
-		ConfigType: "controlplane",
+	cluster.Configs = append(cluster.Configs, model.ClusterConfig{
+		ConfigType: talosconfig.ConfigTypeControlPlane,
 		Config:     string(controlPlane),
 	})
 	err = h.configDB.InsertClusterConfig(ctx, repository.InsertClusterConfigParams{
 		ClusterUuid: uuid.MustParse(cluster.Uuid),
-		ConfigType:  talosconfig.ConfigTypeControlPlane,
+		ConfigType:  string(talosconfig.ConfigTypeControlPlane),
 		Config:      string(controlPlane),
 	})
 	if err != nil {
@@ -211,13 +174,13 @@ func (h *Handler) ClusterGen(ctx context.Context, input *ClusterGenPostInput) (*
 	}
 
 	worker, _ := clusterConfigs.WorkerConfig.Bytes()
-	cluster.Configs = append(cluster.Configs, ClusterConfig{
-		ConfigType: "worker",
+	cluster.Configs = append(cluster.Configs, model.ClusterConfig{
+		ConfigType: talosconfig.ConfigTypeWorker,
 		Config:     string(worker),
 	})
 	err = h.configDB.InsertClusterConfig(ctx, repository.InsertClusterConfigParams{
 		ClusterUuid: uuid.MustParse(cluster.Uuid),
-		ConfigType:  talosconfig.ConfigTypeWorker,
+		ConfigType:  string(talosconfig.ConfigTypeWorker),
 		Config:      string(worker),
 	})
 	if err != nil {
@@ -225,14 +188,14 @@ func (h *Handler) ClusterGen(ctx context.Context, input *ClusterGenPostInput) (*
 	}
 
 	talosctl, _ := clusterConfigs.TalosCtlConfig.Bytes()
-	cluster.Configs = append(cluster.Configs, ClusterConfig{
-		ConfigType: "talosctl",
+	cluster.Configs = append(cluster.Configs, model.ClusterConfig{
+		ConfigType: talosconfig.ConfigTypeTalosctl,
 		Config:     string(talosctl),
 	})
 
 	err = h.configDB.InsertClusterConfig(ctx, repository.InsertClusterConfigParams{
 		ClusterUuid: uuid.MustParse(cluster.Uuid),
-		ConfigType:  talosconfig.ConfigTypeTalosctl,
+		ConfigType:  string(talosconfig.ConfigTypeTalosctl),
 		Config:      string(talosctl),
 	})
 

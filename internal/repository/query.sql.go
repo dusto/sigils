@@ -12,7 +12,7 @@ import (
 )
 
 const attachHostCluster = `-- name: AttachHostCluster :exec
-INSERT INTO host_clusters (host_uuid, cluster_uuid) VALUES ( ?, ? )
+INSERT INTO host_clusters (host_uuid, cluster_uuid) VALUES (?, ?)
 `
 
 type AttachHostClusterParams struct {
@@ -26,7 +26,7 @@ func (q *Queries) AttachHostCluster(ctx context.Context, arg AttachHostClusterPa
 }
 
 const attachHostProfile = `-- name: AttachHostProfile :exec
-INSERT INTO host_profiles (host_uuid, profile_id) VALUES ( ?, ? )
+INSERT INTO host_profiles (host_uuid, profile_id) VALUES (?, ?)
 `
 
 type AttachHostProfileParams struct {
@@ -57,31 +57,12 @@ func (q *Queries) DeleteHost(ctx context.Context, argUuid uuid.UUID) error {
 	return err
 }
 
-const deleteHostCluster = `-- name: DeleteHostCluster :exec
-DELETE FROM host_clusters where host_uuid = ? and cluster_uuid = ?
+const deletePatch = `-- name: DeletePatch :exec
+DELETE FROM patches where id = ?
 `
 
-type DeleteHostClusterParams struct {
-	HostUuid    []byte
-	ClusterUuid uuid.UUID
-}
-
-func (q *Queries) DeleteHostCluster(ctx context.Context, arg DeleteHostClusterParams) error {
-	_, err := q.db.ExecContext(ctx, deleteHostCluster, arg.HostUuid, arg.ClusterUuid)
-	return err
-}
-
-const deleteHostProfile = `-- name: DeleteHostProfile :exec
-DELETE FROM host_profiles where host_uuid = ? and profile_id = ?
-`
-
-type DeleteHostProfileParams struct {
-	HostUuid  []byte
-	ProfileID int64
-}
-
-func (q *Queries) DeleteHostProfile(ctx context.Context, arg DeleteHostProfileParams) error {
-	_, err := q.db.ExecContext(ctx, deleteHostProfile, arg.HostUuid, arg.ProfileID)
+func (q *Queries) DeletePatch(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deletePatch, id)
 	return err
 }
 
@@ -92,189 +73,6 @@ DELETE FROM profiles where id = ?
 func (q *Queries) DeleteProfile(ctx context.Context, id int64) error {
 	_, err := q.db.ExecContext(ctx, deleteProfile, id)
 	return err
-}
-
-const getClusterByUUID = `-- name: GetClusterByUUID :one
-SELECT clusters.uuid, clusters.name, clusters.endpoint, cluster_configs.config_type, cluster_configs.config FROM clusters
-JOIN cluster_configs ON cluster_configs.cluster_uuid = clusters.uuid
-WHERE uuid = ?
-`
-
-type GetClusterByUUIDRow struct {
-	Uuid       uuid.UUID
-	Name       string
-	Endpoint   string
-	ConfigType int64
-	Config     string
-}
-
-func (q *Queries) GetClusterByUUID(ctx context.Context, argUuid uuid.UUID) (GetClusterByUUIDRow, error) {
-	row := q.db.QueryRowContext(ctx, getClusterByUUID, argUuid)
-	var i GetClusterByUUIDRow
-	err := row.Scan(
-		&i.Uuid,
-		&i.Name,
-		&i.Endpoint,
-		&i.ConfigType,
-		&i.Config,
-	)
-	return i, err
-}
-
-const getHostByFqdn = `-- name: GetHostByFqdn :one
-SELECT uuid, fqdn, node_type FROM hosts where fqdn = ? LIMIT 1
-`
-
-func (q *Queries) GetHostByFqdn(ctx context.Context, fqdn string) (Host, error) {
-	row := q.db.QueryRowContext(ctx, getHostByFqdn, fqdn)
-	var i Host
-	err := row.Scan(&i.Uuid, &i.Fqdn, &i.NodeType)
-	return i, err
-}
-
-const getHostByUuid = `-- name: GetHostByUuid :one
-SELECT uuid, fqdn, node_type FROM hosts where uuid = ? LIMIT 1
-`
-
-func (q *Queries) GetHostByUuid(ctx context.Context, argUuid uuid.UUID) (Host, error) {
-	row := q.db.QueryRowContext(ctx, getHostByUuid, argUuid)
-	var i Host
-	err := row.Scan(&i.Uuid, &i.Fqdn, &i.NodeType)
-	return i, err
-}
-
-const getHostClusters = `-- name: GetHostClusters :many
-SELECT hosts.uuid, hosts.fqdn, clusters.uuid, clusters.name  FROM host_clusters
-JOIN clusters ON clusters.uuid = host_clusters.cluster_uuid
-JOIN hosts ON hosts.id = host_clusters.host_uuid
-WHERE host_clusters.host_uuid = ?
-`
-
-type GetHostClustersRow struct {
-	Uuid   uuid.UUID
-	Fqdn   string
-	Uuid_2 uuid.UUID
-	Name   string
-}
-
-func (q *Queries) GetHostClusters(ctx context.Context, hostUuid []byte) ([]GetHostClustersRow, error) {
-	rows, err := q.db.QueryContext(ctx, getHostClusters, hostUuid)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetHostClustersRow
-	for rows.Next() {
-		var i GetHostClustersRow
-		if err := rows.Scan(
-			&i.Uuid,
-			&i.Fqdn,
-			&i.Uuid_2,
-			&i.Name,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getHostProfiles = `-- name: GetHostProfiles :many
-SELECT host_profiles.profile_id, profiles.name, patches.patch FROM host_profiles
-JOIN profiles ON profiles.id = host_profiles.profile_id
-JOIN patches ON  patches.profile_id = host_profiles.profile_id
-WHERE host_uuid = ?
-`
-
-type GetHostProfilesRow struct {
-	ProfileID int64
-	Name      string
-	Patch     string
-}
-
-func (q *Queries) GetHostProfiles(ctx context.Context, hostUuid []byte) ([]GetHostProfilesRow, error) {
-	rows, err := q.db.QueryContext(ctx, getHostProfiles, hostUuid)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetHostProfilesRow
-	for rows.Next() {
-		var i GetHostProfilesRow
-		if err := rows.Scan(&i.ProfileID, &i.Name, &i.Patch); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getProfileById = `-- name: GetProfileById :one
-SELECT id, name FROM profiles WHERE id = ? LIMIT 1
-`
-
-func (q *Queries) GetProfileById(ctx context.Context, id int64) (Profile, error) {
-	row := q.db.QueryRowContext(ctx, getProfileById, id)
-	var i Profile
-	err := row.Scan(&i.ID, &i.Name)
-	return i, err
-}
-
-const getProfileByName = `-- name: GetProfileByName :one
-SELECT id, name FROM profiles WHERE name = ? LIMIT 1
-`
-
-func (q *Queries) GetProfileByName(ctx context.Context, name string) (Profile, error) {
-	row := q.db.QueryRowContext(ctx, getProfileByName, name)
-	var i Profile
-	err := row.Scan(&i.ID, &i.Name)
-	return i, err
-}
-
-const getProfilePatches = `-- name: GetProfilePatches :many
-SELECT id, profile_id, controlplane, worker, host, patch FROM patches where profile_id = ?
-`
-
-func (q *Queries) GetProfilePatches(ctx context.Context, profileID int64) ([]Patch, error) {
-	rows, err := q.db.QueryContext(ctx, getProfilePatches, profileID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Patch
-	for rows.Next() {
-		var i Patch
-		if err := rows.Scan(
-			&i.ID,
-			&i.ProfileID,
-			&i.Controlplane,
-			&i.Worker,
-			&i.Host,
-			&i.Patch,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const insertCluster = `-- name: InsertCluster :exec
@@ -298,7 +96,7 @@ INSERT INTO cluster_configs (cluster_uuid, config_type, config) VALUES (?, ?, ?)
 
 type InsertClusterConfigParams struct {
 	ClusterUuid uuid.UUID
-	ConfigType  int64
+	ConfigType  string
 	Config      string
 }
 
@@ -315,7 +113,7 @@ RETURNING uuid
 type InsertHostParams struct {
 	Uuid     uuid.UUID
 	Fqdn     string
-	NodeType int64
+	NodeType string
 }
 
 func (q *Queries) InsertHost(ctx context.Context, arg InsertHostParams) (uuid.UUID, error) {
@@ -326,24 +124,22 @@ func (q *Queries) InsertHost(ctx context.Context, arg InsertHostParams) (uuid.UU
 }
 
 const insertPatch = `-- name: InsertPatch :one
-INSERT INTO patches ( profile_id, controlplane, worker, host, patch ) VALUES ( ?, ?, ?, ?, ? )
+INSERT INTO patches ( profile_id, node_type, fqdn, patch ) VALUES ( ?, ?, ?, ? )
 RETURNING id
 `
 
 type InsertPatchParams struct {
-	ProfileID    int64
-	Controlplane int64
-	Worker       int64
-	Host         []byte
-	Patch        string
+	ProfileID int64
+	NodeType  string
+	Fqdn      string
+	Patch     string
 }
 
 func (q *Queries) InsertPatch(ctx context.Context, arg InsertPatchParams) (int64, error) {
 	row := q.db.QueryRowContext(ctx, insertPatch,
 		arg.ProfileID,
-		arg.Controlplane,
-		arg.Worker,
-		arg.Host,
+		arg.NodeType,
+		arg.Fqdn,
 		arg.Patch,
 	)
 	var id int64
@@ -363,40 +159,13 @@ func (q *Queries) InsertProfile(ctx context.Context, name string) (int64, error)
 	return id, err
 }
 
-const listProfiles = `-- name: ListProfiles :many
-SELECT id, name FROM profiles
-`
-
-func (q *Queries) ListProfiles(ctx context.Context) ([]Profile, error) {
-	rows, err := q.db.QueryContext(ctx, listProfiles)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Profile
-	for rows.Next() {
-		var i Profile
-		if err := rows.Scan(&i.ID, &i.Name); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const updateHost = `-- name: UpdateHost :exec
 UPDATE hosts set fqdn = ?, node_type = ?, uuid = ? where uuid = ?
 `
 
 type UpdateHostParams struct {
 	Fqdn     string
-	NodeType int64
+	NodeType string
 	Uuid     uuid.UUID
 	Uuid_2   uuid.UUID
 }
