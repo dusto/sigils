@@ -23,6 +23,7 @@ type ClusterConfig struct {
 
 type Host struct {
 	Uuid     uuid.UUID
+	Mac      []byte
 	Fqdn     string
 	NodeType string
 }

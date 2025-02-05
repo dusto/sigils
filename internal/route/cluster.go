@@ -2,6 +2,7 @@ package route
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dusto/sigils/internal/model"
@@ -25,6 +26,11 @@ type ClusterAnyOfInput struct {
 
 type ClusterOneOfInput struct {
 	Uuid uuid.UUID `path:"uuid" required:"false"`
+}
+
+type ClusterAttachHostInput struct {
+	ClusterUUID uuid.UUID `path:"cluster_uuid" required:"true"`
+	HostUUID    uuid.UUID `path:"host_uuid" required:"true"`
 }
 
 type ClusterPostInput struct {
@@ -124,16 +130,13 @@ func (h *Handler) ClusterPost(ctx context.Context, input *ClusterPostInput) (*Cl
 	return resp, nil
 }
 
-func (h *Handler) ClusterDelete(ctx context.Context, input *ClusterOneOfInput) (*ClusterOutput, error) {
-	resp := &ClusterOutput{}
+func (h *Handler) ClusterDelete(ctx context.Context, input *ClusterOneOfInput) (*struct{}, error) {
 
-	err := h.configDB.DeleteCluster(ctx, input.Uuid)
-
-	if err != nil {
-		return resp, huma.Error500InternalServerError("Could not remove cluster", err)
+	if err := h.configDB.DeleteCluster(ctx, input.Uuid); err != nil {
+		return nil, huma.Error500InternalServerError(fmt.Sprintf("Could not remove cluster %s", input.Uuid), err)
 	}
 
-	return resp, nil
+	return nil, nil
 }
 
 func (h *Handler) ClusterGen(ctx context.Context, input *ClusterGenPostInput) (*ClusterOutput, error) {
@@ -206,4 +209,16 @@ func (h *Handler) ClusterGen(ctx context.Context, input *ClusterGenPostInput) (*
 	resp.Body = append(resp.Body, cluster)
 
 	return resp, nil
+}
+
+func (h *Handler) ClusterAttachHost(ctx context.Context, input *ClusterAttachHostInput) (*struct{}, error) {
+
+	err := h.configDB.AttachHostCluster(ctx, repository.AttachHostClusterParams{
+		ClusterUuid: input.ClusterUUID,
+		HostUuid:    input.HostUUID,
+	})
+	if err != nil {
+		return nil, huma.Error500InternalServerError("Could not add Cluster Host relation", err)
+	}
+	return nil, nil
 }

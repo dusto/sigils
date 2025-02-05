@@ -105,27 +105,29 @@ func (q *Queries) InsertClusterConfig(ctx context.Context, arg InsertClusterConf
 	return err
 }
 
-const insertHost = `-- name: InsertHost :one
-INSERT INTO hosts ( uuid, fqdn, node_type ) VALUES ( ?, ?, ? )
-RETURNING uuid
+const insertHost = `-- name: InsertHost :exec
+INSERT INTO hosts ( uuid, mac, fqdn, node_type ) VALUES ( ?, ?, ?, ? )
 `
 
 type InsertHostParams struct {
 	Uuid     uuid.UUID
+	Mac      []byte
 	Fqdn     string
 	NodeType string
 }
 
-func (q *Queries) InsertHost(ctx context.Context, arg InsertHostParams) (uuid.UUID, error) {
-	row := q.db.QueryRowContext(ctx, insertHost, arg.Uuid, arg.Fqdn, arg.NodeType)
-	var uuid uuid.UUID
-	err := row.Scan(&uuid)
-	return uuid, err
+func (q *Queries) InsertHost(ctx context.Context, arg InsertHostParams) error {
+	_, err := q.db.ExecContext(ctx, insertHost,
+		arg.Uuid,
+		arg.Mac,
+		arg.Fqdn,
+		arg.NodeType,
+	)
+	return err
 }
 
-const insertPatch = `-- name: InsertPatch :one
+const insertPatch = `-- name: InsertPatch :exec
 INSERT INTO patches ( profile_id, node_type, fqdn, patch ) VALUES ( ?, ?, ?, ? )
-RETURNING id
 `
 
 type InsertPatchParams struct {
@@ -135,16 +137,14 @@ type InsertPatchParams struct {
 	Patch     string
 }
 
-func (q *Queries) InsertPatch(ctx context.Context, arg InsertPatchParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, insertPatch,
+func (q *Queries) InsertPatch(ctx context.Context, arg InsertPatchParams) error {
+	_, err := q.db.ExecContext(ctx, insertPatch,
 		arg.ProfileID,
 		arg.NodeType,
 		arg.Fqdn,
 		arg.Patch,
 	)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
+	return err
 }
 
 const insertProfile = `-- name: InsertProfile :one

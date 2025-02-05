@@ -41,6 +41,13 @@ func (h *Handler) Register() {
 		Summary:       "Automatically generate new Cluster",
 		DefaultStatus: http.StatusCreated,
 	}, h.ClusterGen)
+	huma.Register(h.api, huma.Operation{
+		OperationID:   "attach-host",
+		Method:        http.MethodPost,
+		Path:          "/clusters/{cluster_uuid}/attach/{host_uuid}",
+		Summary:       "Attach/Add host to cluster",
+		DefaultStatus: http.StatusCreated,
+	}, h.ClusterAttachHost)
 
 	// hosts endpoint
 	huma.Register(h.api, huma.Operation{
@@ -68,6 +75,13 @@ func (h *Handler) Register() {
 		Path:        "/hosts/{uuid}",
 		Summary:     "Delete Host",
 	}, h.HostDelete)
+	huma.Register(h.api, huma.Operation{
+		OperationID:   "attach-profile",
+		Method:        http.MethodPost,
+		Path:          "/hosts/{host_uuid}/attach/{profile_id}",
+		Summary:       "Attach/Add profile to host",
+		DefaultStatus: http.StatusCreated,
+	}, h.HostAttachProfile)
 
 	// profile endpoint
 	huma.Register(h.api, huma.Operation{

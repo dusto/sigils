@@ -76,7 +76,7 @@ func (q *Queries) GetFullClusterConfigs(ctx context.Context) ([]model.Cluster, e
 }
 
 const getHosts = `-- name: GetHosts :many
-SELECT h.uuid, h.fqdn, h.node_type,
+SELECT h.uuid, h.mac, h.fqdn, h.node_type, c.name,
 json_group_array(
   (SELECT json_object(
     'id', p.id,
@@ -89,7 +89,7 @@ json_group_array(
                 'fqdn', pa.fqdn,
                 'patch', pa.patch))
     FROM patches pa
-    WHERE ((pa.node_type IN (0,h.node_type) AND pa.fqdn = '') OR pa.fqdn = h.fqdn) AND pa.profile_id = p.id 
+    WHERE ((pa.node_type IN ('all',h.node_type) AND pa.fqdn = '') OR pa.fqdn = h.fqdn) AND pa.profile_id = p.id 
     GROUP BY pa.profile_id
     )
   )
@@ -99,6 +99,8 @@ json_group_array(
   GROUP BY p.id
 )) profiles
 FROM hosts h
+INNER JOIN host_clusters hc on hc.host_uuid = h.uuid
+INNER JOIN clusters c on c.uuid = hc.cluster_uuid
 GROUP BY h.uuid
 `
 
@@ -114,13 +116,18 @@ func (q *Queries) GetHosts(ctx context.Context) ([]model.Host, error) {
 		var p model.CProfileType
 		if err := rows.Scan(
 			&i.Uuid,
+			&i.Mac,
 			&i.Fqdn,
 			&i.NodeType,
+			&i.ClusterName,
 			&p,
 		); err != nil {
 			return nil, err
 		}
-		i.Profiles = p.Profiles
+		if p.Profiles != nil {
+			i.Profiles = p.Profiles
+
+		}
 		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
@@ -133,7 +140,7 @@ func (q *Queries) GetHosts(ctx context.Context) ([]model.Host, error) {
 }
 
 const getHost = `-- name: GetHost :one
-SELECT h.uuid, h.fqdn, h.node_type,
+SELECT h.uuid, h.mac, h.fqdn, h.node_type, c.name,
 json_group_array(
   (SELECT json_object(
     'id', p.id,
@@ -156,6 +163,8 @@ json_group_array(
   GROUP BY p.id
 )) profiles
 FROM hosts h
+INNER JOIN host_clusters hc on hc.host_uuid = h.uuid
+INNER JOIN clusters c on c.uuid = hc.cluster_uuid
 WHERE h.uuid = ?
 GROUP BY h.uuid
 `
@@ -166,8 +175,10 @@ func (q *Queries) GetHost(ctx context.Context, id uuid.UUID) (model.Host, error)
 	var p model.CProfileType
 	err := row.Scan(
 		&i.Uuid,
+		&i.Mac,
 		&i.Fqdn,
 		&i.NodeType,
+		&i.ClusterName,
 		&p,
 	)
 	i.Profiles = p.Profiles

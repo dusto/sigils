@@ -17,16 +17,14 @@ UPDATE profiles set name = ? WHERE id = ?;
 -- name: DeleteProfile :exec
 DELETE FROM profiles where id = ?;
 
--- name: InsertPatch :one
-INSERT INTO patches ( profile_id, node_type, fqdn, patch ) VALUES ( ?, ?, ?, ? )
-RETURNING id;
+-- name: InsertPatch :exec
+INSERT INTO patches ( profile_id, node_type, fqdn, patch ) VALUES ( ?, ?, ?, ? );
 
 -- name: DeletePatch :exec
 DELETE FROM patches where id = ?;
 
--- name: InsertHost :one
-INSERT INTO hosts ( uuid, fqdn, node_type ) VALUES ( ?, ?, ? )
-RETURNING uuid;
+-- name: InsertHost :exec
+INSERT INTO hosts ( uuid, mac, fqdn, node_type ) VALUES ( ?, ?, ?, ? );
 
 -- name: UpdateHost :exec
 UPDATE hosts set fqdn = ?, node_type = ?, uuid = ? where uuid = ?;

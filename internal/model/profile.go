@@ -10,15 +10,15 @@ import (
 
 type Profile struct {
 	Id      int64   `json:"id,omitempty" doc:"Profile ID"`
-	Name    string  `json:"name" doc:"Profile Name"`
-	Patches []Patch `json:"patches" doc:"Collection of patches associated with profile"`
+	Name    string  `json:"name,omitempty" doc:"Profile Name"`
+	Patches []Patch `json:"patches,omitempty" doc:"Collection of patches associated with profile"`
 }
 
 type Patch struct {
 	Id       int64  `json:"id,omitempty" doc:"Patch ID"`
-	NodeType string `json:"nodetype" doc:"Type of node for patch to apply to" enum:"all,controlplane,worker"`
-	Host     string `json:"host" doc:"Host FQDN/UUID of specific host for patch to apply" default:""`
-	Patch    string `json:"patch" doc:"JSON6902 patch or Strategic Merge patch"`
+	NodeType string `json:"nodetype,omitempty" doc:"Type of node for patch to apply to" enum:"all,controlplane,worker" default:"all"`
+	Fqdn     string `json:"fqdn,omitempty" doc:"Host FQDN/UUID of specific host for patch to apply" format:"hostname"`
+	Patch    string `json:"patch,omitempty" doc:"JSON6902 patch or Strategic Merge patch"`
 }
 
 func (p *Patch) Resolve(ctx huma.Context, prefix *huma.PathBuffer) []error {
@@ -28,7 +28,7 @@ func (p *Patch) Resolve(ctx huma.Context, prefix *huma.PathBuffer) []error {
 		return []error{&huma.ErrorDetail{
 			Message:  "Invalid Patch",
 			Location: prefix.With("Patch"),
-			Value:    err,
+			Value:    err.Error(),
 		}}
 	}
 	return nil
@@ -49,12 +49,18 @@ func (cp *CProfileType) Scan(value interface{}) error {
 		valBytes = v
 	case string:
 		valBytes = []byte(v)
-
 	}
 
-	err := json.Unmarshal(valBytes, &cp.Profiles)
+	var profiles []Profile
+	err := json.Unmarshal(valBytes, &profiles)
 	if err != nil {
 		return err
+	}
+
+	for _, profile := range profiles {
+		if profile.Id != 0 {
+			cp.Profiles = append(cp.Profiles, profile)
+		}
 	}
 
 	return nil

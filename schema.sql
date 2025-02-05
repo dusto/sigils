@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS profiles (
 CREATE TABLE IF NOT EXISTS patches (
   id INTEGER PRIMARY KEY,
   profile_id INTEGER NOT NULL,
-  node_type TEXT NOT NULL DEFAULT 0,
+  node_type TEXT NOT NULL,
   fqdn TEXT NOT NULL,
   patch TEXT NOT NULL,
   FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
@@ -39,11 +39,14 @@ CREATE INDEX IF NOT EXISTS profile_patches_idx on patches ( profile_id );
 
 -- Store hosts
 CREATE TABLE IF NOT EXISTS hosts (
-  uuid BLOB NOT NULL,
+  uuid BLOB PRIMARY KEY,
+  mac BLOB NOT NULL,
   fqdn TEXT NOT NULL,
-  node_type TEXT NOT NULL
+  node_type TEXT NOT NULL,
+  UNIQUE(mac) ON CONFLICT FAIL,
+  UNIQUE(fqdn) ON CONFLICT FAIL
 );
-CREATE INDEX IF NOT EXISTS host_uuid_idx on hosts ( uuid );
+CREATE INDEX IF NOT EXISTS host_mac_idx on hosts ( mac );
 CREATE INDEX IF NOT EXISTS host_fqdn_idx on hosts ( fqdn );
 CREATE INDEX IF NOT EXISTS host_node_type_idx on hosts ( node_type );
 
@@ -53,6 +56,7 @@ CREATE TABLE IF NOT EXISTS host_profiles (
   profile_id INTEGER NOT NULL,
   FOREIGN KEY (host_uuid) REFERENCES hosts(uuid) ON DELETE CASCADE,
   FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE,
+  UNIQUE(host_uuid, profile_id) ON CONFLICT FAIL,
   primary key (host_uuid, profile_id)
  );
 CREATE INDEX IF NOT EXISTS host_profiles_idx on host_profiles (profile_id);
@@ -64,6 +68,8 @@ CREATE TABLE IF NOT EXISTS host_clusters (
   cluster_uuid INTEGER NOT NULL,
   FOREIGN KEY (host_uuid) REFERENCES hosts(uuid) ON DELETE CASCADE,
   FOREIGN KEY (cluster_uuid) REFERENCES clusters(uuid) ON DELETE CASCADE,
+  UNIQUE(host_uuid) ON CONFLICT FAIL,
+  UNIQUE(host_uuid, cluster_uuid) ON CONFLICT FAIL,
   primary key (host_uuid, cluster_uuid)
  );
 CREATE INDEX IF NOT EXISTS host_clusters_cluster_uuidx on host_clusters (cluster_uuid);
