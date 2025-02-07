@@ -153,7 +153,7 @@ json_group_array(
                 'fqdn', pa.fqdn,
                 'patch', pa.patch))
     FROM patches pa
-    WHERE ((pa.node_type IN (0,h.node_type) AND pa.fqdn = '') OR pa.fqdn = h.fqdn) AND pa.profile_id = p.id 
+    WHERE ((pa.node_type IN ('all',h.node_type) AND pa.fqdn = '') OR pa.fqdn = h.fqdn) AND pa.profile_id = p.id 
     GROUP BY pa.profile_id
     )
   )
@@ -180,6 +180,55 @@ func (q *Queries) GetHost(ctx context.Context, id uuid.UUID) (model.Host, error)
 		&i.NodeType,
 		&i.ClusterName,
 		&p,
+	)
+	i.Profiles = p.Profiles
+	return i, err
+}
+
+const getMachineConfig = `-- name: GetMachineConfig :one
+SELECT h.uuid, h.mac, h.fqdn, h.node_type, c.name,
+json_group_array(
+  (SELECT json_object(
+    'id', p.id,
+    'name', p.name,
+    'patches', (
+    SELECT
+    json_group_array(json_object(
+                'id', pa.id, 
+                'node_type', pa.node_type,
+                'fqdn', pa.fqdn,
+                'patch', pa.patch))
+    FROM patches pa
+    WHERE ((pa.node_type IN ('all',h.node_type) AND pa.fqdn = '') OR pa.fqdn = h.fqdn) AND pa.profile_id = p.id 
+    GROUP BY pa.profile_id
+    )
+  )
+  FROM profiles p
+  INNER JOIN host_profiles hp ON hp.profile_id = p.id
+  WHERE hp.host_uuid = h.uuid
+  GROUP BY p.id
+)) profiles,
+  cc.config machineconfig
+FROM hosts h
+INNER JOIN host_clusters hc on hc.host_uuid = h.uuid
+INNER JOIN clusters c on c.uuid = hc.cluster_uuid
+INNER JOIN cluster_configs cc on cc.cluster_uuid = c.uuid and cc.config_type = h.node_type
+WHERE h.uuid = ? OR h.mac = ? OR h.fqdn = ?
+GROUP BY h.uuid
+`
+
+func (q *Queries) GetMachineConfig(ctx context.Context, id uuid.UUID, mac, fqdn string) (model.MachineConfig, error) {
+	row := q.db.QueryRowContext(ctx, getMachineConfig, id, mac, fqdn)
+	var i model.MachineConfig
+	var p model.CProfileType
+	err := row.Scan(
+		&i.Uuid,
+		&i.Mac,
+		&i.Fqdn,
+		&i.NodeType,
+		&i.ClusterName,
+		&p,
+		&i.MachineConfig,
 	)
 	i.Profiles = p.Profiles
 	return i, err

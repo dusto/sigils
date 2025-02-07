@@ -109,4 +109,13 @@ func (h *Handler) Register() {
 		Path:        "/profiles/{id}",
 		Summary:     "Delete Profile",
 	}, h.ProfileDelete)
+
+	// machineconfig endpoint
+	huma.Register(h.api, huma.Operation{
+		OperationID:   "machineconfig",
+		Method:        http.MethodGet,
+		Path:          "/machineconfig",
+		Summary:       "Get a patched machineconfig for a specific host",
+		DefaultStatus: http.StatusCreated,
+	}, h.GetMachineConfig)
 }
