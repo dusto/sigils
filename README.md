@@ -35,7 +35,7 @@ Also, this was a good project to refresh my Go skills after not using Go for a c
 
 ## API docs
 
-Sigils is using the `https://huma.rocks` so running the binary and going to `http://localhost:8888/docs` provides a live interface to work with the API.
+Sigils is using `https://huma.rocks` which gives live `docs` endpoint to provide the openapi spec along with UI for working with the API. Go to `http://localhost:8888/docs` if you start the binary on your local host.
 
 The openapi spec is in the `docs/` directory in the repo
 
