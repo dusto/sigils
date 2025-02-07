@@ -2,19 +2,18 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	_ "embed"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/danielgtaylor/huma/v2/humacli"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/go-chi/httplog/v2"
 
 	"github.com/dusto/sigils/internal/repository"
 	"github.com/dusto/sigils/internal/route"
@@ -30,11 +29,21 @@ type Options struct {
 
 func main() {
 
+	logger := httplog.NewLogger("sigils", httplog.Options{
+		JSON:           true,
+		LogLevel:       slog.LevelDebug,
+		RequestHeaders: true,
+		Tags: map[string]string{
+			"version": "v0.1",
+			"env":     "prod",
+		},
+	})
+
 	cli := humacli.New(func(hooks humacli.Hooks, opts *Options) {
 		ctx := context.Background()
 
-		dbUri := fmt.Sprintf("file:%s?_foreign_keys", opts.StorePath)
-		db, err := sql.Open("sqlite3", dbUri)
+		db := &repository.MultiSqliteDB{}
+		err := db.SetupMultiSqliteDB(opts.StorePath, repository.DefaultConnectionParams())
 		if err != nil {
 			panic(err)
 		}
@@ -47,12 +56,12 @@ func main() {
 		router := chi.NewRouter()
 		router.Use(middleware.RequestID)
 		router.Use(middleware.RealIP)
-		router.Use(middleware.Logger)
+		router.Use(httplog.RequestLogger(logger))
 		router.Use(middleware.Recoverer)
 
 		api := humachi.New(router, huma.DefaultConfig("Sigils", "0.0.1"))
 
-		handle := route.NewHandler(api, queries)
+		handle := route.NewHandler(api, queries, logger)
 		handle.Register()
 
 		// One off define style for docs
@@ -82,11 +91,12 @@ func main() {
 		}
 
 		hooks.OnStart(func() {
-			log.Printf("Server is running with: host:%v port:%v\n", "localhost", opts.Port)
+			logger.Info("Server is running", "host", "localhost", "port", opts.Port)
 
 			err := srv.ListenAndServe()
 			if err != nil && err != http.ErrServerClosed {
-				log.Fatalf("listen: %s\n", err)
+				logger.Error("listen: %s\n", err)
+				os.Exit(1)
 			}
 		})
 
