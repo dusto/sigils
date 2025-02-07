@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/url"
+	"runtime"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -63,11 +64,16 @@ func (db *MultiSqliteDB) SetupMultiSqliteDB(path string, connectionParams *url.V
 	if err != nil {
 		return err
 	}
+	// Only allow one connection for writing since only 1 write can happen at a time with sqlite
+	db.writeDB.SetMaxOpenConns(1)
 
 	db.readDB, err = sql.Open("sqlite3", connectUri)
 	if err != nil {
 		return err
 	}
+
+	// We can have multiple read connections
+	db.readDB.SetMaxOpenConns(max(4, runtime.NumCPU()))
 
 	return nil
 }
