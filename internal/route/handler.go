@@ -7,15 +7,17 @@ import (
 )
 
 type Handler struct {
-	api      huma.API
-	configDB *repository.Queries
-	logger   *httplog.Logger
+	api    huma.API
+	rawDB  *repository.MultiSqliteDB
+	query  *repository.Queries
+	logger *httplog.Logger
 }
 
-func NewHandler(api huma.API, configDB *repository.Queries, logger *httplog.Logger) *Handler {
+func NewHandler(api huma.API, rawDB *repository.MultiSqliteDB, query *repository.Queries, logger *httplog.Logger) *Handler {
 	return &Handler{
-		api:      api,
-		configDB: configDB,
-		logger:   logger,
+		api:    api,
+		rawDB:  rawDB,
+		query:  query,
+		logger: logger,
 	}
 }

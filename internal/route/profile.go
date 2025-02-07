@@ -32,7 +32,7 @@ type ProfilePatchDelete struct {
 func (h *Handler) ProfileGetOneOf(ctx context.Context, input *ProfileOneOfInput) (*ProfileOutput, error) {
 	resp := &ProfileOutput{}
 
-	host, err := h.configDB.GetProfile(ctx, input.Id)
+	host, err := h.query.GetProfile(ctx, input.Id)
 
 	if err != nil {
 		return resp, huma.Error500InternalServerError("Could not find host", err)
@@ -47,7 +47,7 @@ func (h *Handler) ProfileGetAnyOf(ctx context.Context, input *ProfileAnyOfInput)
 	resp := &ProfileOutput{}
 	var err error
 
-	resp.Body, err = h.configDB.GetProfiles(ctx)
+	resp.Body, err = h.query.GetProfiles(ctx)
 
 	if err != nil {
 		return nil, huma.Error500InternalServerError("Could not get list of hosts", err)
@@ -58,13 +58,20 @@ func (h *Handler) ProfileGetAnyOf(ctx context.Context, input *ProfileAnyOfInput)
 
 func (h *Handler) ProfilePost(ctx context.Context, input *ProfilePostInput) (*struct{}, error) {
 	for _, profile := range input.Body {
-		// TODO: Add transaction
-		pid, err := h.configDB.InsertProfile(ctx, profile.Name)
+		tx, err := h.rawDB.BeginWriteTx(ctx)
+		if err != nil {
+			return nil, err
+		}
+		defer tx.Rollback()
+
+		queryTx := h.query.WithTx(tx)
+
+		pid, err := queryTx.InsertProfile(ctx, profile.Name)
 		if err != nil {
 			return nil, huma.Error500InternalServerError("Could not insert profile", err)
 		}
 		for _, patch := range profile.Patches {
-			err := h.configDB.InsertPatch(ctx, repository.InsertPatchParams{
+			err := queryTx.InsertPatch(ctx, repository.InsertPatchParams{
 				ProfileID: pid,
 				NodeType:  patch.NodeType,
 				Fqdn:      patch.Fqdn,
@@ -73,6 +80,10 @@ func (h *Handler) ProfilePost(ctx context.Context, input *ProfilePostInput) (*st
 			if err != nil {
 				return nil, huma.Error500InternalServerError("Could not save patch", err)
 			}
+		}
+		err = tx.Commit()
+		if err != nil {
+			return nil, huma.Error500InternalServerError("Could not commit profile", err)
 		}
 	}
 
@@ -84,7 +95,7 @@ func (h *Handler) ProfileDelete(ctx context.Context, input *ProfilePatchDelete) 
 		return nil, huma.Error501NotImplemented("Deleting of specific patches is not implemented")
 	}
 
-	if err := h.configDB.DeleteProfile(ctx, input.Id); err != nil {
+	if err := h.query.DeleteProfile(ctx, input.Id); err != nil {
 		return nil, huma.Error500InternalServerError(fmt.Sprintf("Could not delete profile %i", input.Id), err)
 	}
 

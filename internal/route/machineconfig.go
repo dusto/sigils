@@ -27,7 +27,7 @@ func (h *Handler) GetMachineConfig(ctx context.Context, input *MachineConfigInpu
 		return nil, huma.Error400BadRequest("No query parameters passed")
 	}
 
-	mc, err := h.configDB.GetMachineConfig(ctx, uuid.MustParse(input.UUID), input.MAC, input.FQDN)
+	mc, err := h.query.GetMachineConfig(ctx, uuid.MustParse(input.UUID), input.MAC, input.FQDN)
 	if err != nil {
 		return mcOut, huma.Error500InternalServerError("Failed to lookup host", err)
 	}

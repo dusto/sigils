@@ -51,7 +51,7 @@ type ClusterGenPostInput struct {
 func (h *Handler) ClusterGetOneOf(ctx context.Context, input *ClusterOneOfInput) (*ClusterOutput, error) {
 	resp := &ClusterOutput{}
 
-	cluster, err := h.configDB.GetClusterByUUID(ctx, input.Uuid)
+	cluster, err := h.query.GetClusterByUUID(ctx, input.Uuid)
 	if err != nil {
 		return resp, nil
 	}
@@ -64,7 +64,7 @@ func (h *Handler) ClusterGetOneOf(ctx context.Context, input *ClusterOneOfInput)
 func (h *Handler) ClusterGetAnyOf(ctx context.Context, input *ClusterAnyOfInput) (*ClusterOutput, error) {
 	resp := &ClusterOutput{}
 
-	clusters, err := h.configDB.GetFullClusterConfigs(ctx)
+	clusters, err := h.query.GetFullClusterConfigs(ctx)
 
 	if err != nil {
 		return nil, huma.Error500InternalServerError("Could not fetch clusters", err)
@@ -84,9 +84,15 @@ func (h *Handler) ClusterPost(ctx context.Context, input *ClusterPostInput) (*Cl
 			cIn.Uuid = uuid.New().String()
 		}
 
-		// TODO: Add transaction
+		tx, err := h.rawDB.BeginWriteTx(ctx)
+		if err != nil {
+			return nil, err
+		}
+		defer tx.Rollback()
 
-		err := h.configDB.InsertCluster(ctx, repository.InsertClusterParams{
+		queryTx := h.query.WithTx(tx)
+
+		err = queryTx.InsertCluster(ctx, repository.InsertClusterParams{
 			Uuid:     uuid.MustParse(cIn.Uuid),
 			Name:     cIn.Name,
 			Endpoint: cIn.Endpoint,
@@ -115,7 +121,7 @@ func (h *Handler) ClusterPost(ctx context.Context, input *ClusterPostInput) (*Cl
 
 				}
 
-				err = h.configDB.InsertClusterConfig(ctx, repository.InsertClusterConfigParams{
+				err = queryTx.InsertClusterConfig(ctx, repository.InsertClusterConfigParams{
 					ClusterUuid: uuid.MustParse(cIn.Uuid),
 					ConfigType:  string(config.ConfigType),
 					Config:      string(config.Config),
@@ -125,6 +131,10 @@ func (h *Handler) ClusterPost(ctx context.Context, input *ClusterPostInput) (*Cl
 				}
 			}
 		}
+		err = tx.Commit()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return resp, nil
@@ -132,7 +142,7 @@ func (h *Handler) ClusterPost(ctx context.Context, input *ClusterPostInput) (*Cl
 
 func (h *Handler) ClusterDelete(ctx context.Context, input *ClusterOneOfInput) (*struct{}, error) {
 
-	if err := h.configDB.DeleteCluster(ctx, input.Uuid); err != nil {
+	if err := h.query.DeleteCluster(ctx, input.Uuid); err != nil {
 		return nil, huma.Error500InternalServerError(fmt.Sprintf("Could not remove cluster %s", input.Uuid), err)
 	}
 
@@ -146,9 +156,15 @@ func (h *Handler) ClusterGen(ctx context.Context, input *ClusterGenPostInput) (*
 	cluster.Name = input.Body[0].Name
 	cluster.Endpoint = input.Body[0].Endpoint
 
-	// TODO: Add transaction
+	tx, err := h.rawDB.BeginWriteTx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
 
-	err := h.configDB.InsertCluster(ctx, repository.InsertClusterParams{
+	queryTx := h.query.WithTx(tx)
+
+	err = queryTx.InsertCluster(ctx, repository.InsertClusterParams{
 		Uuid:     uuid.MustParse(cluster.Uuid),
 		Name:     cluster.Name,
 		Endpoint: cluster.Endpoint,
@@ -167,7 +183,7 @@ func (h *Handler) ClusterGen(ctx context.Context, input *ClusterGenPostInput) (*
 		ConfigType: talosconfig.ConfigTypeControlPlane,
 		Config:     string(controlPlane),
 	})
-	err = h.configDB.InsertClusterConfig(ctx, repository.InsertClusterConfigParams{
+	err = queryTx.InsertClusterConfig(ctx, repository.InsertClusterConfigParams{
 		ClusterUuid: uuid.MustParse(cluster.Uuid),
 		ConfigType:  string(talosconfig.ConfigTypeControlPlane),
 		Config:      string(controlPlane),
@@ -181,7 +197,7 @@ func (h *Handler) ClusterGen(ctx context.Context, input *ClusterGenPostInput) (*
 		ConfigType: talosconfig.ConfigTypeWorker,
 		Config:     string(worker),
 	})
-	err = h.configDB.InsertClusterConfig(ctx, repository.InsertClusterConfigParams{
+	err = queryTx.InsertClusterConfig(ctx, repository.InsertClusterConfigParams{
 		ClusterUuid: uuid.MustParse(cluster.Uuid),
 		ConfigType:  string(talosconfig.ConfigTypeWorker),
 		Config:      string(worker),
@@ -196,7 +212,7 @@ func (h *Handler) ClusterGen(ctx context.Context, input *ClusterGenPostInput) (*
 		Config:     string(talosctl),
 	})
 
-	err = h.configDB.InsertClusterConfig(ctx, repository.InsertClusterConfigParams{
+	err = queryTx.InsertClusterConfig(ctx, repository.InsertClusterConfigParams{
 		ClusterUuid: uuid.MustParse(cluster.Uuid),
 		ConfigType:  string(talosconfig.ConfigTypeTalosctl),
 		Config:      string(talosctl),
@@ -206,6 +222,11 @@ func (h *Handler) ClusterGen(ctx context.Context, input *ClusterGenPostInput) (*
 		return nil, huma.Error500InternalServerError("Could not save talosctl config", err)
 	}
 
+	err = tx.Commit()
+	if err != nil {
+		return nil, huma.Error500InternalServerError("Could not commit transaction", err)
+	}
+
 	resp.Body = append(resp.Body, cluster)
 
 	return resp, nil
@@ -213,7 +234,7 @@ func (h *Handler) ClusterGen(ctx context.Context, input *ClusterGenPostInput) (*
 
 func (h *Handler) ClusterAttachHost(ctx context.Context, input *ClusterAttachHostInput) (*struct{}, error) {
 
-	err := h.configDB.AttachHostCluster(ctx, repository.AttachHostClusterParams{
+	err := h.query.AttachHostCluster(ctx, repository.AttachHostClusterParams{
 		ClusterUuid: input.ClusterUUID,
 		HostUuid:    input.HostUUID,
 	})

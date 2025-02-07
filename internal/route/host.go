@@ -41,7 +41,7 @@ type HostPostInput struct {
 func (h *Handler) HostGetOneOf(ctx context.Context, input *HostOneOfInput) (*HostOutput, error) {
 	resp := &HostOutput{}
 
-	host, err := h.configDB.GetHost(ctx, input.Uuid)
+	host, err := h.query.GetHost(ctx, input.Uuid)
 
 	if err != nil {
 		return resp, huma.Error500InternalServerError("Could not find host", err)
@@ -54,7 +54,7 @@ func (h *Handler) HostGetOneOf(ctx context.Context, input *HostOneOfInput) (*Hos
 
 func (h *Handler) HostGetAnyOf(ctx context.Context, input *HostAnyOfInput) (*HostOutput, error) {
 	resp := &HostOutput{}
-	hosts, err := h.configDB.GetHosts(ctx)
+	hosts, err := h.query.GetHosts(ctx)
 	if err != nil {
 		return resp, huma.Error500InternalServerError("Could get hosts", err)
 	}
@@ -71,8 +71,15 @@ func (h *Handler) HostPost(ctx context.Context, input *HostPostInput) (*struct{}
 			NodeType: inHost.NodeType,
 		}
 
-		// TODO: Add transcation around queries
-		err := h.configDB.InsertHost(ctx, hInsert)
+		tx, err := h.rawDB.BeginWriteTx(ctx)
+		if err != nil {
+			return nil, err
+		}
+		defer tx.Rollback()
+
+		queryTx := h.query.WithTx(tx)
+
+		err = queryTx.InsertHost(ctx, hInsert)
 		if err != nil {
 			return nil, huma.Error500InternalServerError("Could not add host", err)
 		}
@@ -80,10 +87,10 @@ func (h *Handler) HostPost(ctx context.Context, input *HostPostInput) (*struct{}
 		if len(inHost.ProfileIds) != 0 {
 			fmt.Println("Non nil ProfileIds")
 			for _, pid := range inHost.ProfileIds {
-				if _, err := h.configDB.GetProfile(ctx, pid); err != nil {
+				if _, err := h.query.GetProfile(ctx, pid); err != nil {
 					return nil, huma.Error422UnprocessableEntity("Profile ID not found", err)
 				}
-				err := h.configDB.AttachHostProfile(ctx, repository.AttachHostProfileParams{
+				err := queryTx.AttachHostProfile(ctx, repository.AttachHostProfileParams{
 					HostUuid:  uuid.MustParse(inHost.Uuid),
 					ProfileID: pid,
 				})
@@ -94,13 +101,18 @@ func (h *Handler) HostPost(ctx context.Context, input *HostPostInput) (*struct{}
 
 		}
 
+		err = tx.Commit()
+		if err != nil {
+			return nil, huma.Error500InternalServerError("Could not commit host to database", err)
+		}
+
 	}
 	return nil, nil
 }
 
 func (h *Handler) HostDelete(ctx context.Context, input *HostOneOfInput) (*struct{}, error) {
 
-	if err := h.configDB.DeleteHost(ctx, input.Uuid); err != nil {
+	if err := h.query.DeleteHost(ctx, input.Uuid); err != nil {
 		return nil, huma.Error500InternalServerError(fmt.Sprintf("Could not delete Host %s", input.Uuid), err)
 	}
 
@@ -109,7 +121,7 @@ func (h *Handler) HostDelete(ctx context.Context, input *HostOneOfInput) (*struc
 
 func (h *Handler) HostAttachProfile(ctx context.Context, input *HostAttachProfileInput) (*struct{}, error) {
 
-	err := h.configDB.AttachHostProfile(ctx, repository.AttachHostProfileParams{
+	err := h.query.AttachHostProfile(ctx, repository.AttachHostProfileParams{
 		HostUuid:  input.HostUUID,
 		ProfileID: int64(input.ProfileID),
 	})

@@ -61,7 +61,7 @@ func main() {
 
 		api := humachi.New(router, huma.DefaultConfig("Sigils", "0.0.1"))
 
-		handle := route.NewHandler(api, queries, logger)
+		handle := route.NewHandler(api, db, queries, logger)
 		handle.Register()
 
 		// One off define style for docs

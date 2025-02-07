@@ -57,6 +57,11 @@ func (db *MultiSqliteDB) QueryRowContext(ctx context.Context, query string, args
 
 }
 
+func (db *MultiSqliteDB) BeginWriteTx(ctx context.Context) (*sql.Tx, error) {
+	return db.writeDB.BeginTx(ctx, nil)
+
+}
+
 func (db *MultiSqliteDB) SetupMultiSqliteDB(path string, connectionParams *url.Values) error {
 	connectUri := fmt.Sprintf("file:%s?%s", path, connectionParams.Encode())
 	var err error
