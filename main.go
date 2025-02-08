@@ -48,7 +48,7 @@ func main() {
 		LogLevel:       slog.LevelDebug,
 		RequestHeaders: true,
 		Tags: map[string]string{
-			"version": "v0.2",
+			"version": "v1.0.1",
 			"env":     "prod",
 		},
 	})
