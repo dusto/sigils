@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -29,9 +30,10 @@ import (
 var backendDDL string
 
 type Options struct {
-	StorePath   string `help:"Path to database file" default:"sigils.db"`
-	Port        int    `help:"Port to listen on " default:"8888"`
-	MetricsPort int    `help:"Port to serve Prometheus metrics" default:"9001"`
+	StorePath    string `help:"Path to database file" default:"."`
+	DatabaseFile string `help:"Filename for database" default:"sigils.db"`
+	Port         int    `help:"Port to listen on " default:"8888"`
+	MetricsPort  int    `help:"Port to serve Prometheus metrics" default:"9001"`
 }
 
 func main() {
@@ -48,7 +50,7 @@ func main() {
 		LogLevel:       slog.LevelDebug,
 		RequestHeaders: true,
 		Tags: map[string]string{
-			"version": "v1.0.1",
+			"version": "v1.0.2",
 			"env":     "prod",
 		},
 	})
@@ -56,9 +58,11 @@ func main() {
 	cli := humacli.New(func(hooks humacli.Hooks, opts *Options) {
 		ctx := context.Background()
 
+		dbPath := filepath.Join(opts.StorePath, opts.DatabaseFile)
 		db := &repository.MultiSqliteDB{}
-		err := db.SetupMultiSqliteDB(opts.StorePath, repository.DefaultConnectionParams())
+		err := db.SetupMultiSqliteDB(dbPath, repository.DefaultConnectionParams())
 		if err != nil {
+			logger.Error("Could not open database %s")
 			panic(err)
 		}
 		registry.MustRegister(
