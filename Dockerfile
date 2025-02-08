@@ -17,6 +17,8 @@ COPY --from=build /sigils /sigils
 
 # Default port if no params passed
 EXPOSE 8888
+# Default port for metrics
+EXPOSE 9001
 
 USER nonroot:nonroot
 

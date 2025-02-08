@@ -8,6 +8,8 @@ import (
 	"runtime"
 
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 )
 
 var DefaultConnectionParams = func() *url.Values {
@@ -81,4 +83,12 @@ func (db *MultiSqliteDB) SetupMultiSqliteDB(path string, connectionParams *url.V
 	db.readDB.SetMaxOpenConns(max(4, runtime.NumCPU()))
 
 	return nil
+}
+
+func (db *MultiSqliteDB) CollectorWriteDB() prometheus.Collector {
+	return collectors.NewDBStatsCollector(db.writeDB, "writeDB")
+}
+
+func (db *MultiSqliteDB) CollectorReadDB() prometheus.Collector {
+	return collectors.NewDBStatsCollector(db.readDB, "readDB")
 }

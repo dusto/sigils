@@ -7,6 +7,9 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
@@ -14,6 +17,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/httplog/v2"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/dusto/sigils/internal/repository"
 	"github.com/dusto/sigils/internal/route"
@@ -23,18 +29,26 @@ import (
 var backendDDL string
 
 type Options struct {
-	StorePath string `help:"Path to database file" default:"sigils.db"`
-	Port      int    `help:"Port to listen on " default:"8888"`
+	StorePath   string `help:"Path to database file" default:"sigils.db"`
+	Port        int    `help:"Port to listen on " default:"8888"`
+	MetricsPort int    `help:"Port to serve Prometheus metrics" default:"9001"`
 }
 
 func main() {
+	registry := prometheus.NewRegistry()
+	registry.MustRegister(
+		collectors.NewGoCollector(),
+		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{
+			Namespace:    "sigils",
+			ReportErrors: true,
+		}))
 
 	logger := httplog.NewLogger("sigils", httplog.Options{
 		JSON:           true,
 		LogLevel:       slog.LevelDebug,
 		RequestHeaders: true,
 		Tags: map[string]string{
-			"version": "v0.1",
+			"version": "v0.2",
 			"env":     "prod",
 		},
 	})
@@ -47,6 +61,10 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+		registry.MustRegister(
+			db.CollectorReadDB(),
+			db.CollectorWriteDB(),
+		)
 
 		if _, err := db.ExecContext(ctx, backendDDL); err != nil {
 			panic(err)
@@ -86,18 +104,44 @@ func main() {
 		})
 
 		srv := &http.Server{
-			Addr:    fmt.Sprintf("%s:%d", "localhost", opts.Port),
+			Addr:    fmt.Sprintf(":%d", opts.Port),
 			Handler: router,
 		}
 
-		hooks.OnStart(func() {
-			logger.Info("Server is running", "host", "localhost", "port", opts.Port)
+		metricssrv := &http.Server{
+			Addr:    fmt.Sprintf(":%d", opts.MetricsPort),
+			Handler: promhttp.HandlerFor(registry, promhttp.HandlerOpts{}),
+		}
 
-			err := srv.ListenAndServe()
-			if err != nil && err != http.ErrServerClosed {
-				logger.Error("listen: %s\n", err)
-				os.Exit(1)
-			}
+		hooks.OnStart(func() {
+
+			go func() {
+				logger.Info("Server is running", "port", opts.Port)
+				err := srv.ListenAndServe()
+				if err != nil && err != http.ErrServerClosed {
+					logger.Error("Failed to start api", err)
+					os.Exit(1)
+				}
+			}()
+
+			go func() {
+				logger.Info("Metrics is running", "port", opts.MetricsPort)
+				err := metricssrv.ListenAndServe()
+				if err != nil && err != http.ErrServerClosed {
+					logger.Error("Failed to start metrics", err)
+					os.Exit(1)
+				}
+
+			}()
+			sigC := make(chan os.Signal, 1)
+			signal.Notify(sigC, syscall.SIGTERM, syscall.SIGINT)
+			<-sigC
+		})
+
+		hooks.OnStop(func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			srv.Shutdown(ctx)
 		})
 
 	})
