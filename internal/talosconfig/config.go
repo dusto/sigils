@@ -14,4 +14,5 @@ const (
 	NodeTypeAll          NodeType = "all"
 	NodeTypeControlPlane NodeType = "controlplane"
 	NodeTypeWorker       NodeType = "worker"
+	NodeTypeNoDef        NodeType = "nodef"
 )

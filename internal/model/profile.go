@@ -37,10 +37,16 @@ func (p *Patch) Resolve(ctx huma.Context, prefix *huma.PathBuffer) []error {
 // Intermediate type to parse json from sql result
 type CProfileType struct {
 	Profiles []Profile
+	Valid    bool
 }
 
 func (cp *CProfileType) Scan(value interface{}) error {
 	// When getting from the Database we need to parse a json string
+
+	if value == nil {
+		cp.Profiles, cp.Valid = []Profile{}, false
+		return nil
+	}
 
 	var valBytes []byte
 
@@ -66,6 +72,13 @@ func (cp *CProfileType) Scan(value interface{}) error {
 	return nil
 }
 
+func (cp *CProfileType) Value() (driver.Value, error) {
+	if !cp.Valid {
+		return []Profile{}, nil
+	}
+	return json.Marshal(cp)
+}
+
 func (p *Profile) Value() (driver.Value, error) {
 	return json.Marshal(p)
 }
@@ -73,10 +86,16 @@ func (p *Profile) Value() (driver.Value, error) {
 // Intermediate type to parse json from sql result
 type CPatchType struct {
 	Patches []Patch
+	Valid   bool
 }
 
 func (cp *CPatchType) Scan(value interface{}) error {
 	// When getting from the Database we need to parse a json string
+
+	if value == nil {
+		cp.Patches, cp.Valid = []Patch{}, false
+		return nil
+	}
 
 	var valBytes []byte
 
@@ -94,6 +113,13 @@ func (cp *CPatchType) Scan(value interface{}) error {
 	}
 
 	return nil
+}
+
+func (cp *CPatchType) Value() (driver.Value, error) {
+	if !cp.Valid {
+		return []Patch{}, nil
+	}
+	return json.Marshal(cp)
 }
 
 func (p *Patch) Value() (driver.Value, error) {
