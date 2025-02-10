@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/dusto/sigils/internal/repository"
 	"github.com/google/uuid"
 	"github.com/siderolabs/talos/pkg/machinery/config/configloader"
 	"github.com/siderolabs/talos/pkg/machinery/config/configpatcher"
@@ -29,6 +30,16 @@ func (h *Handler) GetMachineConfig(ctx context.Context, input *MachineConfigInpu
 
 	mc, err := h.query.GetMachineConfig(ctx, uuid.MustParse(input.UUID), input.MAC, input.FQDN)
 	if err != nil {
+		if h.opts.AutoAdd {
+			err := h.query.InsertHost(ctx, repository.InsertHostParams{
+				Uuid: uuid.MustParse(input.UUID),
+				Mac:  []byte(input.MAC),
+				Fqdn: input.FQDN,
+			})
+			if err != nil {
+				h.logger.Error("Could not auto add host", "request", input)
+			}
+		}
 		return mcOut, huma.Error500InternalServerError("Failed to lookup host", err)
 	}
 

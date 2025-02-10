@@ -34,6 +34,7 @@ type Options struct {
 	DatabaseFile string `help:"Filename for database" default:"sigils.db"`
 	Port         int    `help:"Port to listen on " default:"8888"`
 	MetricsPort  int    `help:"Port to serve Prometheus metrics" default:"9001"`
+	AutoAdd      bool   `help:"Enable/Disable Auto adding hosts that tried to get a machineconfig" default:"true"`
 }
 
 func main() {
@@ -83,7 +84,11 @@ func main() {
 
 		api := humachi.New(router, huma.DefaultConfig("Sigils", "0.0.1"))
 
-		handle := route.NewHandler(api, db, queries, logger)
+		handleOpts := &route.HandlerOpts{
+			AutoAdd: opts.AutoAdd,
+		}
+
+		handle := route.NewHandler(api, db, queries, logger, handleOpts)
 		handle.Register()
 
 		// One off define style for docs
