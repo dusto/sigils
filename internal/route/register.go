@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/danielgtaylor/huma/v2/autopatch"
 )
 
 func (h *Handler) Register() {
@@ -118,4 +119,6 @@ func (h *Handler) Register() {
 		Summary:       "Get a patched machineconfig for a specific host",
 		DefaultStatus: http.StatusCreated,
 	}, h.GetMachineConfig)
+
+	autopatch.AutoPatch(h.api)
 }

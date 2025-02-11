@@ -21,6 +21,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/spf13/cobra"
 
 	"github.com/dusto/sigils/internal/repository"
 	"github.com/dusto/sigils/internal/route"
@@ -38,6 +39,7 @@ type Options struct {
 }
 
 func main() {
+	var api huma.API
 	registry := prometheus.NewRegistry()
 	registry.MustRegister(
 		collectors.NewGoCollector(),
@@ -82,7 +84,7 @@ func main() {
 		router.Use(httplog.RequestLogger(logger))
 		router.Use(middleware.Recoverer)
 
-		api := humachi.New(router, huma.DefaultConfig("Sigils", "0.0.1"))
+		api = humachi.New(router, huma.DefaultConfig("Sigils", "0.0.1"))
 
 		handleOpts := &route.HandlerOpts{
 			AutoAdd: opts.AutoAdd,
@@ -153,6 +155,15 @@ func main() {
 			srv.Shutdown(ctx)
 		})
 
+	})
+
+	cli.Root().AddCommand(&cobra.Command{
+		Use:   "openapi",
+		Short: "Print OpenAPI spec",
+		Run: func(cmd *cobra.Command, args []string) {
+			b, _ := api.OpenAPI().DowngradeYAML()
+			fmt.Println(string(b))
+		},
 	})
 
 	cli.Run()
