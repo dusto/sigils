@@ -140,7 +140,7 @@ func (q *Queries) GetHosts(ctx context.Context) ([]model.Host, error) {
 }
 
 const getHost = `-- name: GetHost :one
-SELECT h.uuid, h.mac, h.fqdn, h.node_type, c.name,
+SELECT h.uuid, h.mac, h.fqdn, h.node_type, ifnull(c.name, ""),
 json_group_array(
   (SELECT json_object(
     'id', p.id,
@@ -163,8 +163,8 @@ json_group_array(
   GROUP BY p.id
 )) profiles
 FROM hosts h
-INNER JOIN host_clusters hc on hc.host_uuid = h.uuid
-INNER JOIN clusters c on c.uuid = hc.cluster_uuid
+FULL JOIN host_clusters hc on hc.host_uuid = h.uuid
+FULL JOIN clusters c on c.uuid = hc.cluster_uuid
 WHERE h.uuid = ?
 GROUP BY h.uuid
 `
