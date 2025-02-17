@@ -38,6 +38,7 @@ func NewCmd(logger *httplog.Logger, registry *prometheus.Registry, ddl string) *
 	c.Cli.AddCommand(c.server())
 	c.Cli.AddCommand(c.host())
 	c.Cli.AddCommand(c.profile())
+	c.Cli.AddCommand(c.talosconfig())
 
 	return c
 }
