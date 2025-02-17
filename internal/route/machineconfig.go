@@ -19,7 +19,7 @@ type MachineConfigInput struct {
 
 type MachineConfigOutput struct {
 	ContentType string `header:"Content-Type"`
-	Body        string
+	Body        []byte
 }
 
 func (h *Handler) GetMachineConfig(ctx context.Context, input *MachineConfigInput) (*MachineConfigOutput, error) {
@@ -68,7 +68,7 @@ func (h *Handler) GetMachineConfig(ctx context.Context, input *MachineConfigInpu
 	if err != nil {
 		return nil, huma.Error500InternalServerError("Could not get raw machine config", err)
 	}
-	mcOut.Body = string(rawOut)
+	mcOut.Body = rawOut
 
 	mcOut.ContentType = "application/yaml"
 	return mcOut, nil

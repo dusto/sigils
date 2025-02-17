@@ -76,29 +76,11 @@ func (q *Queries) GetFullClusterConfigs(ctx context.Context) ([]model.Cluster, e
 }
 
 const getHosts = `-- name: GetHosts :many
-SELECT h.uuid, h.mac, h.fqdn, h.nodetype, ifnull(c.name, ""),
-json_group_array(
-  (SELECT json_object(
-    'id', p.id,
-    'name', p.name,
-    'patches', (
-    SELECT
-    json_group_array(json_object(
-                'id', pa.id, 
-                'nodetype', pa.nodetype,
-                'fqdn', pa.fqdn,
-                'patch', pa.patch))
-    FROM patches pa
-    WHERE ((pa.nodetype IN ('all',h.nodetype) AND pa.fqdn = '') OR pa.fqdn = h.fqdn) AND pa.profile_id = p.id 
-    GROUP BY pa.profile_id
-    )
-  )
-  FROM profiles p
-  INNER JOIN host_profiles hp ON hp.profile_id = p.id
-  WHERE hp.host_uuid = h.uuid
-  GROUP BY p.id
-)) profiles
+SELECT h.uuid, h.mac, h.fqdn, h.nodetype, ifnull(c.name, ''), json_group_array(json_object('id', p.id, 'name', p.name, 'patches', json(ppa.patches))) profiles
 FROM hosts h
+JOIN host_profiles hp ON hp.host_uuid = h.uuid
+JOIN profiles p ON p.id = hp.profile_id
+JOIN (SELECT fqdn, nodetype, profile_id, json_group_array(json_object('id', pa.id, 'fqdn', pa.fqdn, 'nodetype', pa.nodetype, 'patch', pa.patch)) patches FROM patches pa GROUP BY profile_id ) ppa ON ((ppa.nodetype IN ('all',h.nodetype) AND ppa.fqdn = '') OR ppa.fqdn = h.fqdn) AND ppa.profile_id = p.id 
 FULL JOIN host_clusters hc on hc.host_uuid = h.uuid
 FULL JOIN clusters c on c.uuid = hc.cluster_uuid
 GROUP BY h.uuid
@@ -140,29 +122,11 @@ func (q *Queries) GetHosts(ctx context.Context) ([]model.Host, error) {
 }
 
 const getHost = `-- name: GetHost :one
-SELECT h.uuid, h.mac, h.fqdn, h.nodetype, ifnull(c.name, ""),
-json_group_array(
-  (SELECT json_object(
-    'id', p.id,
-    'name', p.name,
-    'patches', (
-    SELECT
-    json_group_array(json_object(
-                'id', pa.id, 
-                'nodetype', pa.nodetype,
-                'fqdn', pa.fqdn,
-                'patch', pa.patch))
-    FROM patches pa
-    WHERE ((pa.nodetype IN ('all',h.nodetype) AND pa.fqdn = '') OR pa.fqdn = h.fqdn) AND pa.profile_id = p.id 
-    GROUP BY pa.profile_id
-    )
-  )
-  FROM profiles p
-  INNER JOIN host_profiles hp ON hp.profile_id = p.id
-  WHERE hp.host_uuid = h.uuid
-  GROUP BY p.id
-)) profiles
+SELECT h.uuid, h.mac, h.fqdn, h.nodetype, ifnull(c.name, ''), json_group_array(json_object('id', p.id, 'name', p.name, 'patches', json(ppa.patches))) profiles
 FROM hosts h
+JOIN host_profiles hp ON hp.host_uuid = h.uuid
+JOIN profiles p ON p.id = hp.profile_id
+JOIN (SELECT fqdn, nodetype, profile_id, json_group_array(json_object('id', pa.id, 'fqdn', pa.fqdn, 'nodetype', pa.nodetype, 'patch', pa.patch)) patches FROM patches pa GROUP BY profile_id ) ppa ON ((ppa.nodetype IN ('all',h.nodetype) AND ppa.fqdn = '') OR ppa.fqdn = h.fqdn) AND ppa.profile_id = p.id 
 FULL JOIN host_clusters hc on hc.host_uuid = h.uuid
 FULL JOIN clusters c on c.uuid = hc.cluster_uuid
 WHERE h.uuid = ?
@@ -187,29 +151,12 @@ func (q *Queries) GetHost(ctx context.Context, id uuid.UUID) (model.Host, error)
 
 const getMachineConfig = `-- name: GetMachineConfig :one
 SELECT h.uuid, h.mac, h.fqdn, h.nodetype, c.name,
-json_group_array(
-  (SELECT json_object(
-    'id', p.id,
-    'name', p.name,
-    'patches', (
-    SELECT
-    json_group_array(json_object(
-                'id', pa.id, 
-                'nodetype', pa.nodetype,
-                'fqdn', pa.fqdn,
-                'patch', pa.patch))
-    FROM patches pa
-    WHERE ((pa.nodetype IN ('all',h.nodetype) AND pa.fqdn = '') OR pa.fqdn = h.fqdn) AND pa.profile_id = p.id 
-    GROUP BY pa.profile_id
-    )
-  )
-  FROM profiles p
-  INNER JOIN host_profiles hp ON hp.profile_id = p.id
-  WHERE hp.host_uuid = h.uuid
-  GROUP BY p.id
-)) profiles,
+  json_group_array(json_object('id', p.id, 'name', p.name, 'patches', json(ppa.patches))) profiles,
   cc.config machineconfig
 FROM hosts h
+JOIN host_profiles hp ON hp.host_uuid = h.uuid
+JOIN profiles p ON p.id = hp.profile_id
+JOIN (SELECT fqdn, nodetype, profile_id, json_group_array(json_object('id', pa.id, 'fqdn', pa.fqdn, 'nodetype', pa.nodetype, 'patch', pa.patch)) patches FROM patches pa GROUP BY profile_id ) ppa ON ((ppa.nodetype IN ('all',h.nodetype) AND ppa.fqdn = '') OR ppa.fqdn = h.fqdn) AND ppa.profile_id = p.id 
 INNER JOIN host_clusters hc on hc.host_uuid = h.uuid
 INNER JOIN clusters c on c.uuid = hc.cluster_uuid
 INNER JOIN cluster_configs cc on cc.cluster_uuid = c.uuid and cc.config_type = h.nodetype

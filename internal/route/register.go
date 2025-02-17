@@ -117,7 +117,7 @@ func (h *Handler) Register() {
 		Method:        http.MethodGet,
 		Path:          "/machineconfig",
 		Summary:       "Get a patched machineconfig for a specific host",
-		DefaultStatus: http.StatusCreated,
+		DefaultStatus: http.StatusOK,
 	}, h.GetMachineConfig)
 
 	autopatch.AutoPatch(h.api)
