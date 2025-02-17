@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS profiles (
 CREATE TABLE IF NOT EXISTS patches (
   id INTEGER PRIMARY KEY,
   profile_id INTEGER NOT NULL,
-  node_type TEXT NOT NULL,
+  nodetype TEXT NOT NULL,
   fqdn TEXT NOT NULL,
   patch TEXT NOT NULL,
   FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
@@ -42,13 +42,13 @@ CREATE TABLE IF NOT EXISTS hosts (
   uuid BLOB PRIMARY KEY,
   mac BLOB NOT NULL,
   fqdn TEXT NOT NULL,
-  node_type TEXT NOT NULL,
+  nodetype TEXT NOT NULL,
   UNIQUE(mac) ON CONFLICT FAIL,
   UNIQUE(fqdn) ON CONFLICT FAIL
 );
 CREATE INDEX IF NOT EXISTS host_mac_idx on hosts ( mac );
 CREATE INDEX IF NOT EXISTS host_fqdn_idx on hosts ( fqdn );
-CREATE INDEX IF NOT EXISTS host_node_type_idx on hosts ( node_type );
+CREATE INDEX IF NOT EXISTS host_nodetype_idx on hosts ( nodetype );
 
 -- Store hosts profile associations
 CREATE TABLE IF NOT EXISTS host_profiles (

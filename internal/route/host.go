@@ -68,7 +68,7 @@ func (h *Handler) HostPost(ctx context.Context, input *HostPostInput) (*struct{}
 			Uuid:     uuid.MustParse(inHost.Uuid),
 			Mac:      []byte(inHost.Mac),
 			Fqdn:     inHost.Fqdn,
-			NodeType: inHost.NodeType,
+			Nodetype: inHost.NodeType,
 		}
 
 		tx, err := h.rawDB.BeginWriteTx(ctx)

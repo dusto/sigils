@@ -76,7 +76,7 @@ func (q *Queries) GetFullClusterConfigs(ctx context.Context) ([]model.Cluster, e
 }
 
 const getHosts = `-- name: GetHosts :many
-SELECT h.uuid, h.mac, h.fqdn, h.node_type, ifnull(c.name, ""),
+SELECT h.uuid, h.mac, h.fqdn, h.nodetype, ifnull(c.name, ""),
 json_group_array(
   (SELECT json_object(
     'id', p.id,
@@ -85,11 +85,11 @@ json_group_array(
     SELECT
     json_group_array(json_object(
                 'id', pa.id, 
-                'node_type', pa.node_type,
+                'nodetype', pa.nodetype,
                 'fqdn', pa.fqdn,
                 'patch', pa.patch))
     FROM patches pa
-    WHERE ((pa.node_type IN ('all',h.node_type) AND pa.fqdn = '') OR pa.fqdn = h.fqdn) AND pa.profile_id = p.id 
+    WHERE ((pa.nodetype IN ('all',h.nodetype) AND pa.fqdn = '') OR pa.fqdn = h.fqdn) AND pa.profile_id = p.id 
     GROUP BY pa.profile_id
     )
   )
@@ -140,7 +140,7 @@ func (q *Queries) GetHosts(ctx context.Context) ([]model.Host, error) {
 }
 
 const getHost = `-- name: GetHost :one
-SELECT h.uuid, h.mac, h.fqdn, h.node_type, ifnull(c.name, ""),
+SELECT h.uuid, h.mac, h.fqdn, h.nodetype, ifnull(c.name, ""),
 json_group_array(
   (SELECT json_object(
     'id', p.id,
@@ -149,11 +149,11 @@ json_group_array(
     SELECT
     json_group_array(json_object(
                 'id', pa.id, 
-                'node_type', pa.node_type,
+                'nodetype', pa.nodetype,
                 'fqdn', pa.fqdn,
                 'patch', pa.patch))
     FROM patches pa
-    WHERE ((pa.node_type IN ('all',h.node_type) AND pa.fqdn = '') OR pa.fqdn = h.fqdn) AND pa.profile_id = p.id 
+    WHERE ((pa.nodetype IN ('all',h.nodetype) AND pa.fqdn = '') OR pa.fqdn = h.fqdn) AND pa.profile_id = p.id 
     GROUP BY pa.profile_id
     )
   )
@@ -186,7 +186,7 @@ func (q *Queries) GetHost(ctx context.Context, id uuid.UUID) (model.Host, error)
 }
 
 const getMachineConfig = `-- name: GetMachineConfig :one
-SELECT h.uuid, h.mac, h.fqdn, h.node_type, c.name,
+SELECT h.uuid, h.mac, h.fqdn, h.nodetype, c.name,
 json_group_array(
   (SELECT json_object(
     'id', p.id,
@@ -195,11 +195,11 @@ json_group_array(
     SELECT
     json_group_array(json_object(
                 'id', pa.id, 
-                'node_type', pa.node_type,
+                'nodetype', pa.nodetype,
                 'fqdn', pa.fqdn,
                 'patch', pa.patch))
     FROM patches pa
-    WHERE ((pa.node_type IN ('all',h.node_type) AND pa.fqdn = '') OR pa.fqdn = h.fqdn) AND pa.profile_id = p.id 
+    WHERE ((pa.nodetype IN ('all',h.nodetype) AND pa.fqdn = '') OR pa.fqdn = h.fqdn) AND pa.profile_id = p.id 
     GROUP BY pa.profile_id
     )
   )
@@ -212,7 +212,7 @@ json_group_array(
 FROM hosts h
 INNER JOIN host_clusters hc on hc.host_uuid = h.uuid
 INNER JOIN clusters c on c.uuid = hc.cluster_uuid
-INNER JOIN cluster_configs cc on cc.cluster_uuid = c.uuid and cc.config_type = h.node_type
+INNER JOIN cluster_configs cc on cc.cluster_uuid = c.uuid and cc.config_type = h.nodetype
 WHERE h.uuid = ? OR h.mac = ? OR h.fqdn = ?
 GROUP BY h.uuid
 `
@@ -242,7 +242,7 @@ SELECT
     SELECT
     json_group_array(json_object(
                 'id', pa.id, 
-                'node_type', pa.node_type,
+                'nodetype', pa.nodetype,
                 'fqdn', pa.fqdn,
                 'patch', pa.patch))
     FROM patches pa
@@ -271,7 +271,7 @@ SELECT
     SELECT
     json_group_array(json_object(
                 'id', pa.id, 
-                'node_type', pa.node_type,
+                'nodetype', pa.nodetype,
                 'fqdn', pa.fqdn,
                 'patch', pa.patch))
     FROM patches pa

@@ -73,7 +73,7 @@ func (h *Handler) ProfilePost(ctx context.Context, input *ProfilePostInput) (*st
 		for _, patch := range profile.Patches {
 			err := queryTx.InsertPatch(ctx, repository.InsertPatchParams{
 				ProfileID: pid,
-				NodeType:  patch.NodeType,
+				Nodetype:  patch.NodeType,
 				Fqdn:      patch.Fqdn,
 				Patch:     patch.Patch,
 			})

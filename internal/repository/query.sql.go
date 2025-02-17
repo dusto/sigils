@@ -106,14 +106,14 @@ func (q *Queries) InsertClusterConfig(ctx context.Context, arg InsertClusterConf
 }
 
 const insertHost = `-- name: InsertHost :exec
-INSERT INTO hosts ( uuid, mac, fqdn, node_type ) VALUES ( ?, ?, ?, ? )
+INSERT INTO hosts ( uuid, mac, fqdn, nodetype ) VALUES ( ?, ?, ?, ? )
 `
 
 type InsertHostParams struct {
 	Uuid     uuid.UUID
 	Mac      []byte
 	Fqdn     string
-	NodeType string
+	Nodetype string
 }
 
 func (q *Queries) InsertHost(ctx context.Context, arg InsertHostParams) error {
@@ -121,18 +121,18 @@ func (q *Queries) InsertHost(ctx context.Context, arg InsertHostParams) error {
 		arg.Uuid,
 		arg.Mac,
 		arg.Fqdn,
-		arg.NodeType,
+		arg.Nodetype,
 	)
 	return err
 }
 
 const insertPatch = `-- name: InsertPatch :exec
-INSERT INTO patches ( profile_id, node_type, fqdn, patch ) VALUES ( ?, ?, ?, ? )
+INSERT INTO patches ( profile_id, nodetype, fqdn, patch ) VALUES ( ?, ?, ?, ? )
 `
 
 type InsertPatchParams struct {
 	ProfileID int64
-	NodeType  string
+	Nodetype  string
 	Fqdn      string
 	Patch     string
 }
@@ -140,7 +140,7 @@ type InsertPatchParams struct {
 func (q *Queries) InsertPatch(ctx context.Context, arg InsertPatchParams) error {
 	_, err := q.db.ExecContext(ctx, insertPatch,
 		arg.ProfileID,
-		arg.NodeType,
+		arg.Nodetype,
 		arg.Fqdn,
 		arg.Patch,
 	)
@@ -160,12 +160,12 @@ func (q *Queries) InsertProfile(ctx context.Context, name string) (int64, error)
 }
 
 const updateHost = `-- name: UpdateHost :exec
-UPDATE hosts set fqdn = ?, node_type = ?, uuid = ? where uuid = ?
+UPDATE hosts set fqdn = ?, nodetype = ?, uuid = ? where uuid = ?
 `
 
 type UpdateHostParams struct {
 	Fqdn     string
-	NodeType string
+	Nodetype string
 	Uuid     uuid.UUID
 	Uuid_2   uuid.UUID
 }
@@ -173,7 +173,7 @@ type UpdateHostParams struct {
 func (q *Queries) UpdateHost(ctx context.Context, arg UpdateHostParams) error {
 	_, err := q.db.ExecContext(ctx, updateHost,
 		arg.Fqdn,
-		arg.NodeType,
+		arg.Nodetype,
 		arg.Uuid,
 		arg.Uuid_2,
 	)

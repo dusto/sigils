@@ -36,7 +36,7 @@ func (h *Handler) GetMachineConfig(ctx context.Context, input *MachineConfigInpu
 				Uuid:     uuid.MustParse(input.UUID),
 				Mac:      []byte(input.MAC),
 				Fqdn:     input.FQDN,
-				NodeType: string(talosconfig.NodeTypeNoDef),
+				Nodetype: string(talosconfig.NodeTypeNoDef),
 			})
 			if err != nil {
 				h.logger.Error("Host exists or failed to auto add", "request", input, "error", err)

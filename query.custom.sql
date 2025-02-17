@@ -28,7 +28,7 @@ SELECT
     SELECT
     json_group_array(json_object(
                 'id', pa.id, 
-                'node_type', pa.node_type,
+                'nodetype', pa.nodetype,
                 'fqdn', pa.fqdn,
                 'patch', pa.patch))
     FROM patches pa
@@ -48,7 +48,7 @@ SELECT
     SELECT
     json_group_array(json_object(
                 'id', pa.id, 
-                'node_type', pa.node_type,
+                'nodetype', pa.nodetype,
                 'fqdn', pa.fqdn,
                 'patch', pa.patch))
     FROM patches pa
@@ -60,7 +60,7 @@ GROUP BY p.id;
 
 -- name: GetHosts :many
 -- IT IS HANDLED VIA A CUSTOM FUNCTION DO NOT AUTO GENERATE
-SELECT h.uuid, h.fqdn, h.node_type,
+SELECT h.uuid, h.fqdn, h.nodetype,
 json_group_array(
   (SELECT json_object(
     'id', p.id,
@@ -70,11 +70,11 @@ json_group_array(
     json_group_array(json_object(
                 'id', pa.id, 
                 'profile_id', pa.profile_id,
-                'node_type', pa.node_type,
+                'nodetype', pa.nodetype,
                 'fqdn', pa.fqdn,
                 'patch', pa.patch))
     FROM patches pa
-    WHERE ((pa.node_type IN (0,h.node_type) AND pa.fqdn = '') OR pa.fqdn = h.fqdn) AND pa.profile_id = p.id 
+    WHERE ((pa.nodetype IN (0,h.nodetype) AND pa.fqdn = '') OR pa.fqdn = h.fqdn) AND pa.profile_id = p.id 
     GROUP BY pa.profile_id
     )
   )
@@ -88,7 +88,7 @@ GROUP BY h.uuid;
 
 -- name: GetHost :one
 -- IT IS HANDLED VIA A CUSTOM FUNCTION DO NOT AUTO GENERATE
-SELECT h.uuid, h.fqdn, h.node_type,
+SELECT h.uuid, h.fqdn, h.nodetype,
 json_group_array(
   (SELECT json_object(
     'id', p.id,
@@ -98,11 +98,11 @@ json_group_array(
     json_group_array(json_object(
                 'id', pa.id, 
                 'profile_id', pa.profile_id,
-                'node_type', pa.node_type,
+                'nodetype', pa.nodetype,
                 'fqdn', pa.fqdn,
                 'patch', pa.patch))
     FROM patches pa
-    WHERE ((pa.node_type IN (0,h.node_type) AND pa.fqdn = '') OR pa.fqdn = h.fqdn) AND pa.profile_id = p.id 
+    WHERE ((pa.nodetype IN (0,h.nodetype) AND pa.fqdn = '') OR pa.fqdn = h.fqdn) AND pa.profile_id = p.id 
     GROUP BY pa.profile_id
     )
   )

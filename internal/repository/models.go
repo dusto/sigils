@@ -25,7 +25,7 @@ type Host struct {
 	Uuid     uuid.UUID
 	Mac      []byte
 	Fqdn     string
-	NodeType string
+	Nodetype string
 }
 
 type HostCluster struct {
@@ -41,7 +41,7 @@ type HostProfile struct {
 type Patch struct {
 	ID        int64
 	ProfileID int64
-	NodeType  string
+	Nodetype  string
 	Fqdn      string
 	Patch     string
 }
