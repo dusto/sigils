@@ -26,12 +26,14 @@ WHERE uuid = ?
 func (q *Queries) GetClusterByUUID(ctx context.Context, argUuid uuid.UUID) (model.Cluster, error) {
 	row := q.db.QueryRowContext(ctx, getClusterByUUID, argUuid)
 	var i model.Cluster
+	var cc model.CConfigType
 	err := row.Scan(
 		&i.Uuid,
 		&i.Name,
 		&i.Endpoint,
-		&i.Configs,
+		&cc,
 	)
+	i.Configs = cc.Configs
 	return i, err
 }
 
