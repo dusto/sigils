@@ -15,8 +15,8 @@ type HostOneOfInput struct {
 }
 
 type HostAttachProfileInput struct {
-	HostUUID  uuid.UUID `path:"host_uuid" doc:"Host ID" format:"uuid" required:"true"`
-	ProfileID int       `path:"profile_id" doc:"Profile ID" required:"true"`
+	HostUUID    uuid.UUID `path:"host_uuid" doc:"Host ID" format:"uuid" required:"true"`
+	ProfileName string    `path:"profile_name" doc:"Profile Name" required:"false"`
 }
 
 type HostAnyOfInput struct {
@@ -28,12 +28,13 @@ type HostOutput struct {
 }
 
 type HostInput struct {
-	Uuid       string  `json:"uuid" format:"uuid" doc:"Host SMBIOS UUID"`
-	Mac        string  `json:"mac,omitempty" doc:"Host Mac Address" required:"false"`
-	Fqdn       string  `json:"fqdn" format:"hostname" doc:"Host FQDN"`
-	NodeType   string  `json:"nodetype" doc:"Host Node Type" enum:"controlplane,worker"`
-	ProfileIds []int64 `json:"profileids,omitempty" doc:"List of Profile Ids to associate with Host" default:""`
+	Uuid     string   `json:"uuid" format:"uuid" doc:"Host SMBIOS UUID"`
+	Mac      string   `json:"mac,omitempty" doc:"Host Mac Address" required:"false"`
+	Fqdn     string   `json:"fqdn" format:"hostname" doc:"Host FQDN"`
+	NodeType string   `json:"nodetype" doc:"Host Node Type" enum:"controlplane,worker"`
+	Profiles []string `json:"profiles,omitempty" doc:"List of Profile Names to associate with Host" default:""`
 }
+
 type HostPostInput struct {
 	Body []HostInput
 }
@@ -84,13 +85,13 @@ func (h *Handler) HostPost(ctx context.Context, input *HostPostInput) (*struct{}
 			return nil, huma.Error500InternalServerError("Could not add host", err)
 		}
 
-		if len(inHost.ProfileIds) != 0 {
-			fmt.Println("Non nil ProfileIds")
-			for _, pid := range inHost.ProfileIds {
-				if _, err := h.query.GetProfile(ctx, pid); err != nil {
-					return nil, huma.Error422UnprocessableEntity("Profile ID not found", err)
+		if len(inHost.Profiles) != 0 {
+			for _, pName := range inHost.Profiles {
+				pid, err := h.query.GetProfileId(ctx, pName)
+				if err != nil {
+					return nil, huma.Error422UnprocessableEntity("Profile not found", err)
 				}
-				err := queryTx.AttachHostProfile(ctx, repository.AttachHostProfileParams{
+				err = queryTx.AttachHostProfile(ctx, repository.AttachHostProfileParams{
 					HostUuid:  uuid.MustParse(inHost.Uuid),
 					ProfileID: pid,
 				})
@@ -121,9 +122,19 @@ func (h *Handler) HostDelete(ctx context.Context, input *HostOneOfInput) (*struc
 
 func (h *Handler) HostAttachProfile(ctx context.Context, input *HostAttachProfileInput) (*struct{}, error) {
 
-	err := h.query.AttachHostProfile(ctx, repository.AttachHostProfileParams{
+	var pId int64
+	var err error
+
+	if input.ProfileName == "" {
+		return nil, huma.Error422UnprocessableEntity("Profile not passed")
+	}
+	pId, err = h.query.GetProfileId(ctx, input.ProfileName)
+	if err != nil {
+		return nil, huma.Error422UnprocessableEntity("Profile not found", err)
+	}
+	err = h.query.AttachHostProfile(ctx, repository.AttachHostProfileParams{
 		HostUuid:  input.HostUUID,
-		ProfileID: int64(input.ProfileID),
+		ProfileID: pId,
 	})
 	if err != nil {
 		return nil, huma.Error500InternalServerError("Could not save host profile relation", err)

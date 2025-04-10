@@ -1,0 +1,636 @@
+openapi: 3.1.0
+info:
+    title: Sigils
+    version: 0.0.1
+paths:
+    /clusters:
+        get:
+            summary: List Clusters
+            operationId: list-clusters
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/Cluster'
+                default:
+                    description: Error
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorModel'
+        post:
+            summary: Import/Manually Add Cluster
+            operationId: post-cluster
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: array
+                            items:
+                                $ref: '#/components/schemas/Cluster'
+                required: true
+            responses:
+                "201":
+                    description: Created
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/Cluster'
+                default:
+                    description: Error
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorModel'
+    /clusters/{cluster_uuid}/attach/{host_uuid}:
+        post:
+            summary: Attach/Add host to cluster
+            operationId: attach-host
+            parameters:
+                - name: cluster_uuid
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: host_uuid
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "201":
+                    description: Created
+                default:
+                    description: Error
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorModel'
+    /clusters/{uuid}:
+        get:
+            summary: Get Cluster
+            operationId: get-cluster
+            parameters:
+                - name: uuid
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/Cluster'
+                default:
+                    description: Error
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorModel'
+        delete:
+            summary: Delete Cluster
+            operationId: delete-cluster
+            parameters:
+                - name: uuid
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "204":
+                    description: No Content
+                default:
+                    description: Error
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorModel'
+    /clusters/generate:
+        post:
+            summary: Automatically generate new Cluster
+            operationId: gen-cluster
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: array
+                            items:
+                                $ref: '#/components/schemas/ClusterGen'
+                required: true
+            responses:
+                "201":
+                    description: Created
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/Cluster'
+                default:
+                    description: Error
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorModel'
+    /hosts:
+        get:
+            summary: List hosts
+            operationId: list-hosts
+            parameters:
+                - name: search
+                  in: query
+                  explode: false
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/Host'
+                default:
+                    description: Error
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorModel'
+        post:
+            summary: Add Hosts
+            operationId: post-hosts
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: array
+                            items:
+                                $ref: '#/components/schemas/HostInput'
+                required: true
+            responses:
+                "201":
+                    description: Created
+                default:
+                    description: Error
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorModel'
+    /hosts/{host_uuid}/attach/{profile_name}:
+        post:
+            summary: Attach/Add profile to host
+            operationId: attach-profile
+            parameters:
+                - name: host_uuid
+                  in: path
+                  description: Host ID
+                  required: true
+                  schema:
+                    type: string
+                    description: Host ID
+                    format: uuid
+                - name: profile_name
+                  in: path
+                  description: Profile Name
+                  required: true
+                  schema:
+                    type: string
+                    description: Profile Name
+            responses:
+                "201":
+                    description: Created
+                default:
+                    description: Error
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorModel'
+    /hosts/{uuid}:
+        get:
+            summary: Get Host
+            operationId: get-host
+            parameters:
+                - name: uuid
+                  in: path
+                  description: Host ID
+                  required: true
+                  schema:
+                    type: string
+                    description: Host ID
+                    format: uuid
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/Host'
+                default:
+                    description: Error
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorModel'
+        delete:
+            summary: Delete Host
+            operationId: delete-host
+            parameters:
+                - name: uuid
+                  in: path
+                  description: Host ID
+                  required: true
+                  schema:
+                    type: string
+                    description: Host ID
+                    format: uuid
+            responses:
+                "204":
+                    description: No Content
+                default:
+                    description: Error
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorModel'
+    /machineconfig:
+        get:
+            summary: Get a patched machineconfig for a specific host
+            operationId: machineconfig
+            parameters:
+                - name: uuid
+                  in: query
+                  explode: false
+                  schema:
+                    type: string
+                    format: uuid
+                - name: mac
+                  in: query
+                  explode: false
+                  schema:
+                    type: string
+                    format: mac
+                - name: fqdn
+                  in: query
+                  explode: false
+                  schema:
+                    type: string
+                    format: hostname
+            responses:
+                "200":
+                    description: OK
+                    headers:
+                        Content-Type:
+                            schema:
+                                type: string
+                    content:
+                        application/json:
+                            schema:
+                                type: string
+                                contentEncoding: base64
+                default:
+                    description: Error
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorModel'
+    /profiles:
+        get:
+            summary: List profiles
+            operationId: list-profiles
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/Profile'
+                default:
+                    description: Error
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorModel'
+        post:
+            summary: Add Profiles
+            operationId: post-profiles
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: array
+                            items:
+                                $ref: '#/components/schemas/Profile'
+                required: true
+            responses:
+                "201":
+                    description: Created
+                default:
+                    description: Error
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorModel'
+    /profiles/{id}:
+        get:
+            summary: Get Profile
+            operationId: get-profile
+            parameters:
+                - name: id
+                  in: path
+                  description: Profile ID
+                  required: true
+                  schema:
+                    type: integer
+                    description: Profile ID
+                    format: int64
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/Profile'
+                default:
+                    description: Error
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorModel'
+        delete:
+            summary: Delete Profile
+            operationId: delete-profile
+            parameters:
+                - name: id
+                  in: path
+                  description: Profile ID
+                  required: true
+                  schema:
+                    type: integer
+                    description: Profile ID
+                    format: int64
+                - name: patch_id
+                  in: query
+                  description: Patch ID to remove a patch from a profile
+                  explode: false
+                  schema:
+                    type: integer
+                    description: Patch ID to remove a patch from a profile
+                    format: int64
+            responses:
+                "204":
+                    description: No Content
+                default:
+                    description: Error
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorModel'
+components:
+    schemas:
+        Cluster:
+            type: object
+            additionalProperties: false
+            properties:
+                configs:
+                    type: array
+                    description: Cluster Configs
+                    items:
+                        $ref: '#/components/schemas/ClusterConfig'
+                endpoint:
+                    type: string
+                    description: Cluster Endpoint
+                name:
+                    type: string
+                    description: Cluster Name
+                uuid:
+                    type: string
+                    description: Cluster ID
+                    format: uuid
+            required:
+                - name
+                - endpoint
+        ClusterConfig:
+            type: object
+            additionalProperties: false
+            properties:
+                config:
+                    type: string
+                    description: Yaml representation of the config
+                configtype:
+                    type: string
+                    description: Config type controlplane,worker,talosctl
+                    enum:
+                        - controlplane
+                        - worker
+                        - talosctl
+                id:
+                    type: integer
+                    description: ID of Config
+                    format: int64
+                uuid:
+                    type: string
+                    description: Cluster ID
+                    format: uuid
+            required:
+                - configtype
+                - config
+        ClusterGen:
+            type: object
+            additionalProperties: false
+            properties:
+                endpoint:
+                    type: string
+                    description: Cluster Endpoint
+                kubernetesversion:
+                    type: string
+                    description: Kubernetes Version https://www.talos.dev/v1.9/introduction/support-matrix/ for supported versions
+                name:
+                    type: string
+                    description: Cluster Name
+                talosversion:
+                    type: string
+                    description: TalosOS version for config contract
+                    default: "1.9"
+            required:
+                - name
+                - endpoint
+                - kubernetesversion
+                - talosversion
+        ErrorDetail:
+            type: object
+            additionalProperties: false
+            properties:
+                location:
+                    type: string
+                    description: Where the error occurred, e.g. 'body.items[3].tags' or 'path.thing-id'
+                message:
+                    type: string
+                    description: Error message text
+                value:
+                    description: The value at the given location
+        ErrorModel:
+            type: object
+            additionalProperties: false
+            properties:
+                $schema:
+                    type: string
+                    description: A URL to the JSON Schema for this object.
+                    format: uri
+                    examples:
+                        - https://example.com/schemas/ErrorModel.json
+                    readOnly: true
+                detail:
+                    type: string
+                    description: A human-readable explanation specific to this occurrence of the problem.
+                    examples:
+                        - Property foo is required but is missing.
+                errors:
+                    type: array
+                    description: Optional list of individual error details
+                    items:
+                        $ref: '#/components/schemas/ErrorDetail'
+                instance:
+                    type: string
+                    description: A URI reference that identifies the specific occurrence of the problem.
+                    format: uri
+                    examples:
+                        - https://example.com/error-log/abc123
+                status:
+                    type: integer
+                    description: HTTP status code
+                    format: int64
+                    examples:
+                        - 400
+                title:
+                    type: string
+                    description: A short, human-readable summary of the problem type. This value should not change between occurrences of the error.
+                    examples:
+                        - Bad Request
+                type:
+                    type: string
+                    description: A URI reference to human-readable documentation for the error.
+                    format: uri
+                    default: about:blank
+                    examples:
+                        - https://example.com/errors/example
+        Host:
+            type: object
+            additionalProperties: false
+            properties:
+                clustername:
+                    type: string
+                    description: Name of cluster associated with host
+                fqdn:
+                    type: string
+                    description: Host FQDN
+                    format: hostname
+                mac:
+                    type: string
+                    description: Host Mac Address
+                nodetype:
+                    type: string
+                    description: Host Node Type
+                    enum:
+                        - controlplane
+                        - worker
+                        - nodef
+                profiles:
+                    type: array
+                    description: List of Patches for host
+                    items:
+                        $ref: '#/components/schemas/Profile'
+                uuid:
+                    type: string
+                    description: Host SMBIOS UUID
+                    format: uuid
+            required:
+                - uuid
+                - fqdn
+                - nodetype
+        HostInput:
+            type: object
+            additionalProperties: false
+            properties:
+                fqdn:
+                    type: string
+                    description: Host FQDN
+                    format: hostname
+                mac:
+                    type: string
+                    description: Host Mac Address
+                nodetype:
+                    type: string
+                    description: Host Node Type
+                    enum:
+                        - controlplane
+                        - worker
+                profiles:
+                    type: array
+                    description: List of Profile Names to associate with Host
+                    items:
+                        type: string
+                uuid:
+                    type: string
+                    description: Host SMBIOS UUID
+                    format: uuid
+            required:
+                - uuid
+                - fqdn
+                - nodetype
+        Patch:
+            type: object
+            additionalProperties: false
+            properties:
+                fqdn:
+                    type: string
+                    description: Host FQDN/UUID of specific host for patch to apply
+                    format: hostname
+                id:
+                    type: integer
+                    description: Patch ID
+                    format: int64
+                nodetype:
+                    type: string
+                    description: Type of node for patch to apply to
+                    default: all
+                    enum:
+                        - all
+                        - controlplane
+                        - worker
+                patch:
+                    type: string
+                    description: JSON6902 patch or Strategic Merge patch
+        Profile:
+            type: object
+            additionalProperties: false
+            properties:
+                id:
+                    type: integer
+                    description: Profile ID
+                    format: int64
+                name:
+                    type: string
+                    description: Profile Name
+                patches:
+                    type: array
+                    description: Collection of patches associated with profile
+                    items:
+                        $ref: '#/components/schemas/Patch'
+

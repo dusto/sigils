@@ -14,6 +14,9 @@ RETURNING id;
 -- name: UpdateProfile :exec
 UPDATE profiles set name = ? WHERE id = ?;
 
+-- name: GetProfileId :one
+SELECT id FROM profiles where name = ?;
+
 -- name: DeleteProfile :exec
 DELETE FROM profiles where id = ?;
 

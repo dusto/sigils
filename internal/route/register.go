@@ -79,7 +79,7 @@ func (h *Handler) Register() {
 	huma.Register(h.api, huma.Operation{
 		OperationID:   "attach-profile",
 		Method:        http.MethodPost,
-		Path:          "/hosts/{host_uuid}/attach/{profile_id}",
+		Path:          "/hosts/{host_uuid}/attach/{profile_name}",
 		Summary:       "Attach/Add profile to host",
 		DefaultStatus: http.StatusCreated,
 	}, h.HostAttachProfile)

@@ -23,7 +23,8 @@ CREATE INDEX IF NOT EXISTS cluster_configs_type_idx on cluster_configs (config_t
 -- Store profile info
 CREATE TABLE IF NOT EXISTS profiles (
   id INTEGER PRIMARY KEY,
-  name TEXT NOT NULL
+  name TEXT NOT NULL,
+  UNIQUE(name) ON CONFLICT FAIL
 );
 
 -- Store profile patch sets

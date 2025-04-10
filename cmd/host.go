@@ -12,11 +12,11 @@ import (
 )
 
 type hostOpts struct {
-	Fqdn       string  `yaml:"fqdn"`
-	Uuid       string  `yaml:"uuid"`
-	Mac        string  `yaml:"mac,omitempty"`
-	Nodetype   string  `yaml:"nodetype"`
-	ProfileIds []int64 `yaml:"profileids,omitempty"`
+	Fqdn     string   `yaml:"fqdn"`
+	Uuid     string   `yaml:"uuid"`
+	Mac      string   `yaml:"mac,omitempty"`
+	Nodetype string   `yaml:"nodetype"`
+	Profiles []string `yaml:"profiles,omitempty"`
 }
 
 type listOpts struct {
@@ -24,13 +24,13 @@ type listOpts struct {
 }
 
 func commonHostFlags(cmd *cobra.Command, hopts *hostOpts, inputfile *string) {
-	defaultIds := make([]int64, 0)
+	defaultProfiles := make([]string, 0)
 	cmd.Flags().StringVarP(&hopts.Uuid, "uuid", "i", "", "Host UUID")
 	cmd.Flags().StringVarP(&hopts.Fqdn, "fqdn", "f", "", "Host FQDN")
 	cmd.Flags().StringVarP(&hopts.Nodetype, "type", "t", "", "Host NodeType (controlplane,worker)")
 	cmd.Flags().StringVarP(&hopts.Mac, "mac", "m", "", "Host Mac Address")
 	cmd.Flags().StringVar(inputfile, "file", "", "Yaml file to use as input instead of specifying arguments on cli")
-	cmd.Flags().Int64SliceVarP(&hopts.ProfileIds, "profiles", "p", defaultIds, "Profile Ids to associate to Host")
+	cmd.Flags().StringSliceVarP(&hopts.Profiles, "profiles", "p", defaultProfiles, "Profiles to associate to Host")
 }
 
 func (c *Cmd) host() *cobra.Command {
@@ -108,11 +108,11 @@ func (c *Cmd) host() *cobra.Command {
 				os.Exit(1)
 			}
 			in := sdk.HostInput{
-				Fqdn:       hopts.Fqdn,
-				Uuid:       uuid.MustParse(hopts.Uuid),
-				Nodetype:   sdk.HostInputNodetype(hopts.Nodetype),
-				Mac:        &hopts.Mac,
-				Profileids: &hopts.ProfileIds,
+				Fqdn:     hopts.Fqdn,
+				Uuid:     uuid.MustParse(hopts.Uuid),
+				Nodetype: sdk.HostInputNodetype(hopts.Nodetype),
+				Mac:      &hopts.Mac,
+				Profiles: &hopts.Profiles,
 			}
 
 			res, err := client.PostHosts(ctx, []sdk.HostInput{in})
@@ -170,7 +170,7 @@ func (c *Cmd) host() *cobra.Command {
 				if hostS.Profiles != nil {
 					for _, profile := range *hostS.Profiles {
 						if profile.Id != nil {
-							*in.Profileids = append(*in.Profileids, *profile.Id)
+							*in.Profiles = append(*in.Profiles, *profile.Name)
 						}
 					}
 				}
@@ -192,9 +192,9 @@ func (c *Cmd) host() *cobra.Command {
 			if hopts.Mac != "" {
 				in.Mac = &hopts.Mac
 			}
-			if in.Profileids != nil || len(hopts.ProfileIds) > 0 {
-				*in.Profileids = append(*in.Profileids, hopts.ProfileIds...)
-				*in.Profileids = slices.Compact(*in.Profileids)
+			if in.Profiles != nil || len(hopts.Profiles) > 0 {
+				*in.Profiles = append(*in.Profiles, hopts.Profiles...)
+				*in.Profiles = slices.Compact(*in.Profiles)
 			}
 
 			// If host override changes from opts
