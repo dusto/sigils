@@ -18,6 +18,7 @@ import (
 	"github.com/go-chi/httplog/v2"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 
 	"github.com/dusto/sigils/internal/repository"
 	"github.com/dusto/sigils/internal/route"
@@ -29,6 +30,7 @@ type ServerOptions struct {
 	Port         int    `help:"Port to listen on " default:"8888"`
 	MetricsPort  int    `help:"Port to serve Prometheus metrics" default:"9001"`
 	AutoAdd      bool   `help:"Enable/Disable Auto adding hosts that tried to get a machineconfig" default:"true"`
+	OpenAPI      bool   `help:"Print openapi spec to stdout" default:"false"`
 }
 
 func (c *Cmd) server() *cobra.Command {
@@ -72,6 +74,12 @@ func (c *Cmd) server() *cobra.Command {
 
 			handle := route.NewHandler(c.api, db, queries, c.httplogger, handleOpts)
 			handle.Register()
+
+			if opts.OpenAPI {
+				b, _ := yaml.Marshal(c.api.OpenAPI())
+				fmt.Println(string(b))
+				return
+			}
 
 			// One off define style for docs
 			router.Get("/docs", func(w http.ResponseWriter, r *http.Request) {
@@ -158,5 +166,6 @@ func (c *Cmd) server() *cobra.Command {
 	server.Flags().IntVarP(&opts.Port, "port", "p", 8888, "Port for Rest API to listen on")
 	server.Flags().IntVarP(&opts.MetricsPort, "metrics_port", "m", 9001, "Port for Metrics endpoint")
 	server.Flags().BoolVarP(&opts.AutoAdd, "auto_add", "a", true, "Enable/Disable auto adding hosts that tried to get a machine config")
+	server.Flags().BoolVarP(&opts.OpenAPI, "openapi", "o", false, "Print OpenAPI docs to stdout")
 	return server
 }

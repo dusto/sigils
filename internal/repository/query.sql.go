@@ -75,6 +75,17 @@ func (q *Queries) DeleteProfile(ctx context.Context, id int64) error {
 	return err
 }
 
+const getProfileId = `-- name: GetProfileId :one
+SELECT id FROM profiles where name = ?
+`
+
+func (q *Queries) GetProfileId(ctx context.Context, name string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getProfileId, name)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const insertCluster = `-- name: InsertCluster :exec
 INSERT INTO clusters (uuid, name, endpoint) VALUES (?, ?, ?)
 `
