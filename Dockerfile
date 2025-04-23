@@ -37,4 +37,4 @@ EXPOSE 8888
 # Default port for metrics
 EXPOSE 9001
 
-ENTRYPOINT ["/sigils", "server", "--storepath", "/data/sigils"]
+ENTRYPOINT ["/sigils"]
